@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Учебный календарь</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/@fullcalendar/core@6.1.8/main.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/@fullcalendar/daygrid@6.1.8/main.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/@fullcalendar/timegrid@6.1.8/main.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/@fullcalendar/list@6.1.8/main.min.css" rel="stylesheet">
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            padding: 10px;
+            background-color: var(--tg-theme-bg-color, #ffffff);
+            color: var(--tg-theme-text-color, #000000);
+        }
+        .header {
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        .view-buttons {
+            margin-bottom: 15px;
+            display: flex;
+            gap: 5px;
+            overflow-x: auto;
+            padding-bottom: 5px;
+        }
+        .view-buttons::-webkit-scrollbar {
+            display: none;
+        }
+        .btn-view {
+            white-space: nowrap;
+        }
+        #calendar {
+            margin-top: 15px;
+        }
+        .fc-event {
+            cursor: pointer;
+            font-size: 0.85em;
+            padding: 2px 4px;
+        }
+        .modal-content {
+            background-color: var(--tg-theme-bg-color, #ffffff);
+            color: var(--tg-theme-text-color, #000000);
+        }
+        .form-control, .form-select {
+            background-color: var(--tg-theme-secondary-bg-color, #f0f0f0);
+            color: var(--tg-theme-text-color, #000000);
+            border-color: var(--tg-theme-hint-color, #cccccc);
+        }
+        .btn-primary {
+            background-color: var(--tg-theme-button-color, #2481cc);
+            border-color: var(--tg-theme-button-color, #2481cc);
+        }
+        .subject-badge {
+            cursor: pointer;
+            margin-right: 5px;
+            margin-bottom: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid">
+        <div class="header">
+            <h4>📚 Учебный календарь</h4>
+            <p class="text-muted">Планируйте свои занятия и контрольные</p>
+        </div>
+
+        <div class="view-buttons">
+            <button class="btn btn-sm btn-outline-primary btn-view" data-view="dayGridMonth">Месяц</button>
+            <button class="btn btn-sm btn-outline-primary btn-view" data-view="timeGridWeek">Неделя (с временем)</button>
+            <button class="btn btn-sm btn-outline-primary btn-view" data-view="dayGridWeek">Неделя</button>
+            <button class="btn btn-sm btn-outline-primary btn-view" data-view="listWeek">Список</button>
+            <button class="btn btn-sm btn-outline-primary btn-view" data-view="listMonth">Список (месяц)</button>
+        </div>
+
+        <div class="d-flex justify-content-between mb-3">
+            <button class="btn btn-sm btn-outline-secondary" id="prev-btn">← Назад</button>
+            <h5 id="current-date" style="text-align: center; margin: 0;"></h5>
+            <button class="btn btn-sm btn-outline-secondary" id="next-btn">Вперёд →</button>
+        </div>
+
+        <div id="calendar"></div>
+
+        <div class="fixed-bottom p-3" style="background-color: var(--tg-theme-bg-color);">
+            <button class="btn btn-primary w-100" id="add-event-btn">Добавить занятие</button>
+        </div>
+    </div>
+
+    <!-- Модальное окно для добавления/редактирования события -->
+    <div class="modal fade" id="eventModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modalTitle">Добавить занятие</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="eventForm">
+                        <input type="hidden" id="eventId">
+                        <div class="mb-3">
+                            <label for="eventTitle" class="form-label">Название предмета</label>
+                            <input type="text" class="form-control" id="eventTitle" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="eventType" class="form-label">Тип занятия</label>
+                            <select class="form-select" id="eventType">
+                                <option value="lecture">Лекция</option>
+                                <option value="practice">Практика</option>
+                                <option value="lab">Лабораторная</option>
+                                <option value="exam">Экзамен</option>
+                                <option value="test">Зачёт</option>
+                                <option value="other">Другое</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="eventStart" class="form-label">Начало</label>
+                            <input type="datetime-local" class="form-control" id="eventStart" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="eventEnd" class="form-label">Конец</label>
+                            <input type="datetime-local" class="form-control" id="eventEnd" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="eventLocation" class="form-label">Место</label>
+                            <input type="text" class="form-control" id="eventLocation">
+                        </div>
+                        <div class="mb-3">
+                            <label for="eventDescription" class="form-label">Описание</label>
+                            <textarea class="form-control" id="eventDescription" rows="2"></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Повторение</label>
+                            <select class="form-select" id="eventRepeat">
+                                <option value="none">Не повторять</option>
+                                <option value="daily">Ежедневно</option>
+                                <option value="weekly">Еженедельно</option>
+                                <option value="monthly">Ежемесячно</option>
+                            </select>
+                        </div>
+                        <div class="mb-3" id="repeatUntilContainer" style="display: none;">
+                            <label for="repeatUntil" class="form-label">Повторять до</label>
+                            <input type="date" class="form-control" id="repeatUntil">
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-danger me-auto" id="deleteEventBtn" style="display: none;">Удалить</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                    <button type="button" class="btn btn-primary" id="saveEventBtn">Сохранить</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Модальное окно для управления предметами -->
+    <div class="modal fade" id="subjectsModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Мои предметы</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <div class="input-group">
+                            <input type="text" class="form-control" id="newSubjectInput" placeholder="Новый предмет">
+                            <button class="btn btn-primary" id="addSubjectBtn">Добавить</button>
+                        </div>
+                    </div>
+                    <div id="subjectsList">
+                        <!-- Список предметов будет здесь -->
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Закрыть</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@fullcalendar/core@6.1.8/index.global.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@fullcalendar/daygrid@6.1.8/index.global.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@fullcalendar/timegrid@6.1.8/index.global.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@fullcalendar/interaction@6.1.8/index.global.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@fullcalendar/list@6.1.8/index.global.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Инициализация Telegram WebApp
+            const tg = window.Telegram.WebApp;
+            tg.expand();
+            tg.enableClosingConfirmation();
+            
+            // Инициализация календаря
+            const calendarEl = document.getElementById('calendar');
+            const calendar = new FullCalendar.Calendar(calendarEl, {
+                initialView: 'dayGridMonth',
+                headerToolbar: false,
+                locale: 'ru',
+                firstDay: 1, // Понедельник как первый день недели
+                height: 'auto',
+                editable: true,
+                selectable: true,
+                eventClick: function(info) {
+                    openEditModal(info.event);
+                },
+                dateClick: function(info) {
+                    openAddModal(info.date);
+                },
+                events: loadEvents(),
+                eventContent: function(arg) {
+                    // Кастомизация отображения событий
+                    const typeIcon = getTypeIcon(arg.event.extendedProps.type);
+                    const timeText = arg.timeText ? `${arg.timeText} ` : '';
+                    
+                    return {
+                        html: `
+                            <div class="d-flex align-items-center">
+                                <span class="me-1">${typeIcon}</span>
+                                <div class="flex-grow-1">
+                                    <div class="fw-bold">${timeText}${arg.event.title}</div>
+                                    ${arg.event.extendedProps.location ? `<div class="small text-muted">${arg.event.extendedProps.location}</div>` : ''}
+                                </div>
+                            </div>
+                        `
+                    };
+                },
+                datesSet: function(info) {
+                    updateCurrentDate(info.view);
+                }
+            });
+            
+            calendar.render();
+            
+            // Загрузка данных из localStorage
+            function loadEvents() {
+                const savedEvents = localStorage.getItem('studentCalendarEvents');
+                return savedEvents ? JSON.parse(savedEvents) : [];
+            }
+            
+            function saveEvents(events) {
+                localStorage.setItem('studentCalendarEvents', JSON.stringify(events));
+            }
+            
+            // Обновление отображаемой даты
+            function updateCurrentDate(view) {
+                const title = document.getElementById('current-date');
+                title.textContent = view.title;
+            }
+            
+            // Кнопки навигации
+            document.getElementById('prev-btn').addEventListener('click', function() {
+                calendar.prev();
+            });
+            
+            document.getElementById('next-btn').addEventListener('click', function() {
+                calendar.next();
+            });
+            
+            // Кнопки изменения вида
+            document.querySelectorAll('.btn-view').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const view = this.getAttribute('data-view');
+                    calendar.changeView(view);
+                });
+            });
+            
+            // Иконки для типов занятий
+            function getTypeIcon(type) {
+                const icons = {
+                    'lecture': '📚',
+                    'practice': '✏️',
+                    'lab': '🔬',
+                    'exam': '📝',
+                    'test': '✅',
+                    'other': '📅'
+                };
+                return icons[type] || '📅';
+            }
+            
+            // Открытие модального окна для добавления события
+            function openAddModal(date) {
+                const modal = new bootstrap.Modal(document.getElementById('eventModal'));
+                document.getElementById('modalTitle').textContent = 'Добавить занятие';
+                document.getElementById('eventId').value = '';
+                document.getElementById('eventForm').reset();
+                document.getElementById('deleteEventBtn').style.display = 'none';
+                
+                // Установка даты и времени по умолчанию
+                const startDate = new Date(date);
+                startDate.setHours(9, 0, 0, 0);
+                
+                const endDate = new Date(startDate);
+                endDate.setHours(startDate.getHours() + 1);
+                
+                document.getElementById('eventStart').value = formatDateTimeForInput(startDate);
+                document.getElementById('eventEnd').value = formatDateTimeForInput(endDate);
+                
+                modal.show();
+            }
+            
+            // Открытие модального окна для редактирования события
+            function openEditModal(event) {
+                const modal = new bootstrap.Modal(document.getElementById('eventModal'));
+                document.getElementById('modalTitle').textContent = 'Редактировать занятие';
+                document.getElementById('eventId').value = event.id;
+                document.getElementById('eventTitle').value = event.title;
+                document.getElementById('eventType').value = event.extendedProps.type || 'lecture';
+                document.getElementById('eventStart').value = formatDateTimeForInput(event.start);
+                document.getElementById('eventEnd').value = formatDateTimeForInput(event.end || new Date(event.start.getTime() + 60 * 60 * 1000));
+                document.getElementById('eventLocation').value = event.extendedProps.location || '';
+                document.getElementById('eventDescription').value = event.extendedProps.description || '';
+                document.getElementById('deleteEventBtn').style.display = 'block';
+                
+                modal.show();
+            }
+            
+            // Форматирование даты для input[type=datetime-local]
+            function formatDateTimeForInput(date) {
+                return date.toISOString().slice(0, 16);
+            }
+            
+            // Сохранение события
+            document.getElementById('saveEventBtn').addEventListener('click', function() {
+                const eventId = document.getElementById('eventId').value;
+                const eventTitle = document.getElementById('eventTitle').value.trim();
+                const eventType = document.getElementById('eventType').value;
+                const eventStart = document.getElementById('eventStart').value;
+                const eventEnd = document.getElementById('eventEnd').value;
+                const eventLocation = document.getElementById('eventLocation').value.trim();
+                const eventDescription = document.getElementById('eventDescription').value.trim();
+                const eventRepeat = document.getElementById('eventRepeat').value;
+                const repeatUntil = document.getElementById('repeatUntil').value;
+                
+                if (!eventTitle) {
+                    alert('Пожалуйста, укажите название предмета');
+                    return;
+                }
+                
+                const newEvent = {
+                    id: eventId || Date.now().toString(),
+                    title: eventTitle,
+                    start: eventStart,
+                    end: eventEnd,
+                    extendedProps: {
+                        type: eventType,
+                        location: eventLocation,
+                        description: eventDescription
+                    }
+                };
+                
+                let events = loadEvents();
+                
+                if (eventId) {
+                    // Редактирование существующего события
+                    events = events.map(e => e.id === eventId ? newEvent : e);
+                } else {
+                    // Добавление нового события
+                    events.push(newEvent);
+                    
+                    // Обработка повторяющихся событий
+                    if (eventRepeat !== 'none' && repeatUntil) {
+                        const startDate = new Date(eventStart);
+                        const untilDate = new Date(repeatUntil);
+                        let nextDate;
+                        
+                        switch (eventRepeat) {
+                            case 'daily':
+                                nextDate = new Date(startDate);
+                                nextDate.setDate(nextDate.getDate() + 1);
+                                break;
+                            case 'weekly':
+                                nextDate = new Date(startDate);
+                                nextDate.setDate(nextDate.getDate() + 7);
+                                break;
+                            case 'monthly':
+                                nextDate = new Date(startDate);
+                                nextDate.setMonth(nextDate.getMonth() + 1);
+                                break;
+                        }
+                        
+                        while (nextDate <= untilDate) {
+                            const recurringEvent = {
+                                ...newEvent,
+                                id: Date.now().toString(),
+                                start: nextDate.toISOString().slice(0, 16),
+                                end: new Date(new Date(eventEnd).getTime() + (nextDate - startDate)).toISOString().slice(0, 16)
+                            };
+                            
+                            events.push(recurringEvent);
+                            
+                            switch (eventRepeat) {
+                                case 'daily':
+                                    nextDate.setDate(nextDate.getDate() + 1);
+                                    break;
+                                case 'weekly':
+                                    nextDate.setDate(nextDate.getDate() + 7);
+                                    break;
+                                case 'monthly':
+                                    nextDate.setMonth(nextDate.getMonth() + 1);
+                                    break;
+                            }
+                        }
+                    }
+                }
+                
+                saveEvents(events);
+                calendar.refetchEvents();
+                
+                bootstrap.Modal.getInstance(document.getElementById('eventModal')).hide();
+            });
+            
+            // Удаление события
+            document.getElementById('deleteEventBtn').addEventListener('click', function() {
+                if (confirm('Вы уверены, что хотите удалить это занятие?')) {
+                    const eventId = document.getElementById('eventId').value;
+                    let events = loadEvents();
+                    events = events.filter(e => e.id !== eventId);
+                    
+                    saveEvents(events);
+                    calendar.refetchEvents();
+                    
+                    bootstrap.Modal.getInstance(document.getElementById('eventModal')).hide();
+                }
+            });
+            
+            // Обработка повторяющихся событий
+            document.getElementById('eventRepeat').addEventListener('change', function() {
+                const repeatUntilContainer = document.getElementById('repeatUntilContainer');
+                if (this.value !== 'none') {
+                    repeatUntilContainer.style.display = 'block';
+                    
+                    // Установка даты окончания повторений (по умолчанию +1 месяц)
+                    const startDate = new Date(document.getElementById('eventStart').value);
+                    const untilDate = new Date(startDate);
+                    untilDate.setMonth(untilDate.getMonth() + 1);
+                    document.getElementById('repeatUntil').value = untilDate.toISOString().slice(0, 10);
+                } else {
+                    repeatUntilContainer.style.display = 'none';
+                }
+            });
+            
+            // Кнопка добавления события
+            document.getElementById('add-event-btn').addEventListener('click', function() {
+                openAddModal(calendar.getDate());
+            });
+            
+            // Инициализация модального окна предметов
+            const subjectsModal = new bootstrap.Modal(document.getElementById('subjectsModal'));
+            
+            // Загрузка предметов
+            function loadSubjects() {
+                const savedSubjects = localStorage.getItem('studentSubjects');
+                return savedSubjects ? JSON.parse(savedSubjects) : [];
+            }
+            
+            function saveSubjects(subjects) {
+                localStorage.setItem('studentSubjects', JSON.stringify(subjects));
+            }
+            
+            // Отображение списка предметов
+            function renderSubjectsList() {
+                const subjects = loadSubjects();
+                const container = document.getElementById('subjectsList');
+                container.innerHTML = '';
+                
+                if (subjects.length === 0) {
+                    container.innerHTML = '<p class="text-muted">Нет добавленных предметов</p>';
+                    return;
+                }
+                
+                const listGroup = document.createElement('div');
+                listGroup.className = 'list-group';
+                
+                subjects.forEach((subject, index) => {
+                    const item = document.createElement('div');
+                    item.className = 'list-group-item d-flex justify-content-between align-items-center';
+                    item.innerHTML = `
+                        <span>${subject}</span>
+                        <button class="btn btn-sm btn-outline-danger delete-subject-btn" data-index="${index}">×</button>
+                    `;
+                    listGroup.appendChild(item);
+                });
+                
+                container.appendChild(listGroup);
+                
+                // Обработчики для кнопок удаления
+                document.querySelectorAll('.delete-subject-btn').forEach(btn => {
+                    btn.addEventListener('click', function() {
+                        const index = parseInt(this.getAttribute('data-index'));
+                        const subjects = loadSubjects();
+                        subjects.splice(index, 1);
+                        saveSubjects(subjects);
+                        renderSubjectsList();
+                    });
+                });
+            }
+            
+            // Добавление нового предмета
+            document.getElementById('addSubjectBtn').addEventListener('click', function() {
+                const input = document.getElementById('newSubjectInput');
+                const subjectName = input.value.trim();
+                
+                if (subjectName) {
+                    const subjects = loadSubjects();
+                    if (!subjects.includes(subjectName)) {
+                        subjects.push(subjectName);
+                        saveSubjects(subjects);
+                        renderSubjectsList();
+                        input.value = '';
+                    } else {
+                        alert('Этот предмет уже есть в списке');
+                    }
+                }
+            });
+            
+            // Инициализация при загрузке
+            renderSubjectsList();
+            
+            // Обработка нажатия кнопки "Мои предметы"
+            document.getElementById('manageSubjectsBtn').addEventListener('click', function() {
+                renderSubjectsList();
+                subjectsModal.show();
+            });
+            
+            // Обработка нажатия кнопки "Экспорт"
+            document.getElementById('exportBtn').addEventListener('click', function() {
+                const events = loadEvents();
+                const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(events, null, 2));
+                const downloadAnchorNode = document.createElement('a');
+                downloadAnchorNode.setAttribute("href", dataStr);
+                downloadAnchorNode.setAttribute("download", "student_calendar_export.json");
+                document.body.appendChild(downloadAnchorNode);
+                downloadAnchorNode.click();
+                downloadAnchorNode.remove();
+                
+                tg.showAlert("Календарь экспортирован");
+            });
+            
+            // Обработка нажатия кнопки "Импорт"
+            document.getElementById('importBtn').addEventListener('click', function() {
+                const fileInput = document.createElement('input');
+                fileInput.type = 'file';
+                fileInput.accept = '.json';
+                
+                fileInput.onchange = e => {
+                    const file = e.target.files[0];
+                    const reader = new FileReader();
+                    
+                    reader.onload = function(e) {
+                        try {
+                            const events = JSON.parse(e.target.result);
+                            saveEvents(events);
+                            calendar.refetchEvents();
+                            tg.showAlert("Календарь успешно импортирован");
+                        } catch (error) {
+                            tg.showAlert("Ошибка при импорте файла");
+                        }
+                    };
+                    
+                    reader.readAsText(file);
+                };
+                
+                fileInput.click();
+            });
+        });
+    </script>
+</body>
+</html>
