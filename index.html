@@ -1,9 +1,266 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-    <!-- Все предыдущие метатеги и стили остаются без изменений -->
-    <!-- Добавим только новый стиль для уведомлений -->
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Учебный календарь</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/@fullcalendar/core@6.1.8/main.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/@fullcalendar/daygrid@6.1.8/main.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/@fullcalendar/timegrid@6.1.8/main.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/@fullcalendar/list@6.1.8/main.min.css" rel="stylesheet">
     <style>
+        :root {
+            --tg-bg-color: var(--tg-theme-bg-color, #ffffff);
+            --tg-text-color: var(--tg-theme-text-color, #000000);
+            --tg-hint-color: var(--tg-theme-hint-color, #7d7d7d);
+            --tg-link-color: var(--tg-theme-link-color, #3390ec);
+            --tg-button-color: var(--tg-theme-button-color, #3390ec);
+            --tg-button-text-color: var(--tg-theme-button-text-color, #ffffff);
+            --tg-secondary-bg-color: var(--tg-theme-secondary-bg-color, #f0f0f0);
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            padding: 0;
+            margin: 0;
+            background-color: var(--tg-bg-color);
+            color: var(--tg-text-color);
+            min-height: 100vh;
+        }
+        
+        .container-fluid {
+            padding: 12px;
+            padding-bottom: 70px;
+        }
+        
+        .header {
+            margin-bottom: 16px;
+            text-align: center;
+            padding-top: 8px;
+        }
+        
+        .header h4 {
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+        
+        .header p {
+            color: var(--tg-hint-color);
+            font-size: 0.9em;
+            margin: 0;
+        }
+        
+        .view-buttons {
+            margin-bottom: 12px;
+            display: flex;
+            gap: 6px;
+            overflow-x: auto;
+            padding-bottom: 6px;
+            scrollbar-width: none;
+        }
+        
+        .view-buttons::-webkit-scrollbar {
+            display: none;
+        }
+        
+        .btn-view {
+            white-space: nowrap;
+            border-radius: 12px;
+            font-size: 0.85em;
+            padding: 6px 12px;
+            background-color: var(--tg-secondary-bg-color);
+            border: none;
+            color: var(--tg-text-color);
+        }
+        
+        .btn-view.active {
+            background-color: var(--tg-button-color);
+            color: var(--tg-button-text-color);
+        }
+        
+        .navigation-buttons {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 12px;
+            align-items: center;
+        }
+        
+        .navigation-buttons button {
+            background: none;
+            border: none;
+            color: var(--tg-link-color);
+            font-size: 1em;
+            padding: 6px 12px;
+        }
+        
+        #current-date {
+            font-weight: 500;
+            text-align: center;
+            margin: 0;
+            color: var(--tg-text-color);
+        }
+        
+        #calendar {
+            margin-top: 8px;
+            border-radius: 12px;
+            overflow: hidden;
+        }
+        
+        .fc {
+            --fc-border-color: var(--tg-secondary-bg-color);
+            --fc-page-bg-color: var(--tg-bg-color);
+            --fc-neutral-bg-color: var(--tg-secondary-bg-color);
+            --fc-list-event-hover-bg-color: var(--tg-secondary-bg-color);
+        }
+        
+        .fc-theme-standard .fc-scrollgrid {
+            border: none;
+        }
+        
+        .fc-theme-standard td, .fc-theme-standard th {
+            border-color: var(--tg-secondary-bg-color);
+        }
+        
+        .fc .fc-daygrid-day-frame {
+            background-color: var(--tg-bg-color);
+        }
+        
+        .fc .fc-daygrid-day.fc-day-today {
+            background-color: rgba(51, 144, 236, 0.1);
+        }
+        
+        .fc .fc-col-header-cell {
+            background-color: var(--tg-secondary-bg-color);
+            padding: 8px 0;
+        }
+        
+        .fc .fc-col-header-cell-cushion {
+            color: var(--tg-text-color);
+            font-weight: 500;
+            text-decoration: none;
+        }
+        
+        .fc .fc-daygrid-day-number {
+            color: var(--tg-text-color);
+            padding: 4px;
+        }
+        
+        .fc-event {
+            cursor: pointer;
+            font-size: 0.8em;
+            padding: 2px 4px;
+            margin: 1px 2px;
+            border-radius: 4px;
+            border: none;
+        }
+        
+        .fc-event .fc-event-main {
+            padding: 2px;
+        }
+        
+        .fc-event.lecture {
+            background-color: rgba(75, 192, 192, 0.2);
+            color: #4bc0c0;
+        }
+        
+        .fc-event.practice {
+            background-color: rgba(54, 162, 235, 0.2);
+            color: #36a2eb;
+        }
+        
+        .fc-event.lab {
+            background-color: rgba(255, 159, 64, 0.2);
+            color: #ff9f40;
+        }
+        
+        .fc-event.exam {
+            background-color: rgba(255, 99, 132, 0.2);
+            color: #ff6384;
+        }
+        
+        .fc-event.test {
+            background-color: rgba(153, 102, 255, 0.2);
+            color: #9966ff;
+        }
+        
+        .fc-event.other {
+            background-color: rgba(201, 203, 207, 0.2);
+            color: #c9cbcf;
+        }
+        
+        .fixed-bottom-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background-color: var(--tg-bg-color);
+            padding: 12px;
+            box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+            display: flex;
+            gap: 8px;
+            z-index: 1000;
+        }
+        
+        .fixed-bottom-bar button {
+            flex: 1;
+            border-radius: 12px;
+            padding: 10px;
+            font-size: 0.9em;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+        
+        .btn-primary {
+            background-color: var(--tg-button-color);
+            border-color: var(--tg-button-color);
+            color: var(--tg-button-text-color);
+        }
+        
+        .btn-outline-primary {
+            border-color: var(--tg-button-color);
+            color: var(--tg-button-color);
+            background-color: transparent;
+        }
+        
+        .modal-content {
+            background-color: var(--tg-bg-color);
+            color: var(--tg-text-color);
+            border-radius: 14px;
+            border: none;
+        }
+        
+        .modal-header {
+            border-bottom-color: var(--tg-secondary-bg-color);
+        }
+        
+        .modal-footer {
+            border-top-color: var(--tg-secondary-bg-color);
+        }
+        
+        .form-control, .form-select {
+            background-color: var(--tg-secondary-bg-color);
+            color: var(--tg-text-color);
+            border: none;
+            border-radius: 10px;
+            padding: 10px 14px;
+        }
+        
+        .form-control:focus, .form-select:focus {
+            background-color: var(--tg-secondary-bg-color);
+            color: var(--tg-text-color);
+            box-shadow: 0 0 0 2px rgba(51, 144, 236, 0.3);
+        }
+        
+        .form-label {
+            color: var(--tg-text-color);
+            margin-bottom: 6px;
+            font-size: 0.9em;
+        }
+        
         .notification {
             position: fixed;
             top: 20px;
@@ -24,279 +281,782 @@
         .notification.show {
             opacity: 1;
         }
+        
+        .group-badge {
+            display: inline-flex;
+            align-items: center;
+            background-color: var(--tg-secondary-bg-color);
+            border-radius: 12px;
+            padding: 4px 8px;
+            margin-right: 6px;
+            margin-bottom: 6px;
+            font-size: 0.8em;
+        }
+        
+        .group-badge .badge-text {
+            margin-right: 4px;
+        }
+        
+        .group-badge .remove-btn {
+            background: none;
+            border: none;
+            color: var(--tg-hint-color);
+            padding: 0;
+            margin-left: 4px;
+            font-size: 0.8em;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: var(--tg-hint-color);
+        }
+        
+        .empty-state-icon {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            opacity: 0.5;
+        }
     </style>
 </head>
 <body>
-    <!-- Весь предыдущий HTML остаётся без изменений -->
-    <!-- Добавляем элемент для уведомлений -->
-    <div class="notification" id="notification"></div>
+    <div class="container-fluid">
+        <div class="header">
+            <h4>📚 Учебный календарь</h4>
+            <p>Планируйте занятия для всей группы</p>
+        </div>
 
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            // Инициализация Telegram WebApp
-            const tg = window.Telegram.WebApp;
-            tg.expand();
-            tg.enableClosingConfirmation();
+        <div class="view-buttons">
+            <button class="btn-view active" data-view="dayGridMonth">Месяц</button>
+            <button class="btn-view" data-view="timeGridWeek">Неделя</button>
+            <button class="btn-view" data-view="listWeek">Список</button>
+        </div>
+
+        <div class="navigation-buttons">
+            <button id="prev-btn">←</button>
+            <h5 id="current-date"></h5>
+            <button id="next-btn">→</button>
+        </div>
+
+        <div id="calendar"></div>
+
+        <div class="fixed-bottom-bar">
+            <button class="btn btn-outline-primary" id="today-btn">Сегодня</button>
+            <button class="btn btn-primary" id="add-event-btn">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                    <path d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4z"/>
+                </svg>
+                Добавить
+            </button>
+            <button class="btn btn-outline-primary" id="groups-btn">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                    <path d="M7 14s-1 0-1-1 1-4 5-4 5 3 5 4-1 1-1 1H7Zm4-6a3 3 0 1 0 0-6 3 3 0 0 0 0 6Zm-5.784 6A2.238 2.238 0 0 1 5 13c0-1.355.68-2.75 1.936-3.72A6.325 6.325 0 0 0 5 9c-4 0-5 3-5 4s1 1 1 1h4.216ZM4.5 8a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z"/>
+                </svg>
+                Группы
+            </button>
+        </div>
+
+        <!-- Уведомления -->
+        <div class="notification" id="notification"></div>
+    </div>
+
+    <!-- Модальное окно для добавления/редактирования события -->
+    <div class="modal fade" id="eventModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modalTitle">Добавить занятие</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="eventForm">
+                        <input type="hidden" id="eventId">
+                        <div class="mb-3">
+                            <label for="eventTitle" class="form-label">Название предмета</label>
+                            <input type="text" class="form-control" id="eventTitle" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="eventType" class="form-label">Тип занятия</label>
+                            <select class="form-select" id="eventType">
+                                <option value="lecture">Лекция</option>
+                                <option value="practice">Практика</option>
+                                <option value="lab">Лабораторная</option>
+                                <option value="exam">Экзамен</option>
+                                <option value="test">Зачёт</option>
+                                <option value="other">Другое</option>
+                            </select>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="eventStart" class="form-label">Начало</label>
+                                <input type="datetime-local" class="form-control" id="eventStart" required>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="eventEnd" class="form-label">Конец</label>
+                                <input type="datetime-local" class="form-control" id="eventEnd" required>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Для групп</label>
+                            <div id="userGroupsContainer" class="d-flex flex-wrap">
+                                <!-- Группы пользователя будут здесь -->
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="eventLocation" class="form-label">Аудитория</label>
+                            <input type="text" class="form-control" id="eventLocation" placeholder="Например: 305">
+                        </div>
+                        <div class="mb-3">
+                            <label for="eventTeacher" class="form-label">Преподаватель</label>
+                            <input type="text" class="form-control" id="eventTeacher" placeholder="ФИО преподавателя">
+                        </div>
+                        <div class="mb-3">
+                            <label for="eventDescription" class="form-label">Примечание</label>
+                            <textarea class="form-control" id="eventDescription" rows="2" placeholder="Дополнительная информация"></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Повторение</label>
+                            <select class="form-select" id="eventRepeat">
+                                <option value="none">Не повторять</option>
+                                <option value="weekly">Каждую неделю</option>
+                                <option value="monthly">Каждый месяц</option>
+                            </select>
+                        </div>
+                        <div class="mb-3" id="repeatUntilContainer" style="display: none;">
+                            <label for="repeatUntil" class="form-label">Повторять до</label>
+                            <input type="date" class="form-control" id="repeatUntil">
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-danger me-auto" id="deleteEventBtn" style="display: none;">Удалить</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                    <button type="button" class="btn btn-primary" id="saveEventBtn">Сохранить</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Модальное окно для управления группами -->
+    <div class="modal fade" id="groupsModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Управление группами</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <div class="input-group">
+                            <input type="text" class="form-control" id="newGroupInput" placeholder="Название группы">
+                            <button class="btn btn-primary" id="addGroupBtn">Создать группу</button>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                <h6>Мои группы</h6>
+            <div id="myGroupsList" class="list-group mb-3">
+        <!-- Список групп пользователя -->
+    </div>
+                        <h6>Доступные группы</h6>
+                    <div id="availableGroupsList" class="list-group">
+                        <!-- Список доступных групп -->
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Закрыть</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@fullcalendar/core@6.1.8/index.global.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@fullcalendar/daygrid@6.1.8/index.global.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@fullcalendar/timegrid@6.1.8/index.global.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@fullcalendar/interaction@6.1.8/index.global.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@fullcalendar/list@6.1.8/index.global.min.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Инициализация Telegram WebApp
+        const tg = window.Telegram.WebApp;
+        tg.expand();
+        tg.enableClosingConfirmation();
+        
+        // Получаем данные пользователя
+        const user = tg.initDataUnsafe.user || {};
+        const userId = user.id;
+        const userName = [user.first_name, user.last_name].filter(Boolean).join(' ');
+        
+        // Функция для показа уведомлений
+        function showNotification(message, duration = 3000) {
+            const notification = document.getElementById('notification');
+            notification.textContent = message;
+            notification.classList.add('show');
             
-            // Получаем данные пользователя
-            const user = tg.initDataUnsafe.user || {};
-            const userId = user.id;
-            const userName = [user.first_name, user.last_name].filter(Boolean).join(' ');
-            
-            // Функция для показа уведомлений
-            function showNotification(message, duration = 3000) {
-                const notification = document.getElementById('notification');
-                notification.textContent = message;
-                notification.classList.add('show');
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, duration);
+        }
+        
+        // Инициализация календаря
+        const calendarEl = document.getElementById('calendar');
+        const calendar = new FullCalendar.Calendar(calendarEl, {
+            initialView: 'dayGridMonth',
+            headerToolbar: false,
+            locale: 'ru',
+            firstDay: 1,
+            height: 'auto',
+            editable: true,
+            selectable: true,
+            eventClick: function(info) {
+                openEditModal(info.event);
+            },
+            dateClick: function(info) {
+                openAddModal(info.date);
+            },
+            events: loadEvents(),
+            eventContent: function(arg) {
+                const typeIcon = getTypeIcon(arg.event.extendedProps.type);
+                const timeText = arg.timeText ? `${arg.timeText} ` : '';
+                const groups = arg.event.extendedProps.groups ? arg.event.extendedProps.groups.join(', ') : '';
                 
-                setTimeout(() => {
-                    notification.classList.remove('show');
-                }, duration);
-            }
-            
-            // Модифицируем функции работы с группами
-            function loadGroups() {
-                const savedGroups = localStorage.getItem('studentGroups') || '{}';
-                return JSON.parse(savedGroups);
-            }
-            
-            function saveGroups(groups) {
-                localStorage.setItem('studentGroups', JSON.stringify(groups));
-            }
-            
-            function loadGroupMembers() {
-                const savedMembers = localStorage.getItem('groupMembers') || '{}';
-                return JSON.parse(savedMembers);
-            }
-            
-            function saveGroupMembers(members) {
-                localStorage.setItem('groupMembers', JSON.stringify(members));
-            }
-            
-            // Проверка доступа пользователя к группе
-            function getUserGroups() {
-                const members = loadGroupMembers();
-                const userGroups = [];
-                
-                for (const groupName in members) {
-                    if (members[groupName].includes(userId)) {
-                        userGroups.push(groupName);
-                    }
-                }
-                
-                return userGroups;
-            }
-            
-            // Обновлённая функция инициализации групп
-            function initGroups() {
-                let groups = loadGroups();
-                const members = loadGroupMembers();
-                
-                // Если это первый запуск, создаём демо-группы
-                if (Object.keys(groups).length === 0) {
-                    groups = {
-                        'ИВТ-21': [],
-                        'ПИ-21': [],
-                        'ФИИТ-21': []
-                    };
-                    saveGroups(groups);
-                }
-                
-                // Если пользователь ещё не состоит ни в одной группе
-                const userGroups = getUserGroups();
-                if (userGroups.length === 0 && userId) {
-                    // Предлагаем первую доступную группу
-                    const firstGroup = Object.keys(groups)[0];
-                    if (!members[firstGroup]) members[firstGroup] = [];
-                    members[firstGroup].push(userId);
-                    saveGroupMembers(members);
-                    
-                    showNotification(`Вы добавлены в группу ${firstGroup}`);
-                }
-                
-                return groups;
-            }
-            
-            // Обновлённая функция обновления интерфейса групп
-            function updateGroupSelect() {
-                const userGroups = getUserGroups();
-                const allGroups = initGroups();
-                const groupSelect = document.getElementById('groupSelect');
-                const eventGroupsContainer = document.getElementById('eventGroupsContainer');
-                
-                // Очищаем и обновляем select
-                groupSelect.innerHTML = '';
-                
-                if (userGroups.length > 1) {
-                    const allOption = document.createElement('option');
-                    allOption.value = 'all';
-                    allOption.textContent = 'Все мои группы';
-                    groupSelect.appendChild(allOption);
-                }
-                
-                // Очищаем и обновляем контейнер групп в модальном окне
-                eventGroupsContainer.innerHTML = '';
-                
-                userGroups.forEach(group => {
-                    // Добавляем в select
-                    const option = document.createElement('option');
-                    option.value = group;
-                    option.textContent = group;
-                    groupSelect.appendChild(option);
-                    
-                    // Добавляем чекбоксы в модальное окно
-                    const groupCheckbox = document.createElement('div');
-                    groupCheckbox.className = 'form-check';
-                    groupCheckbox.innerHTML = `
-                        <input class="form-check-input" type="checkbox" value="${group}" id="group-${group}" checked>
-                        <label class="form-check-label" for="group-${group}">
-                            ${group}
-                        </label>
-                    `;
-                    eventGroupsContainer.appendChild(groupCheckbox);
-                });
-                
-                // Обновляем список групп в модальном окне управления
-                renderGroupsList();
-            }
-            
-            // Обновлённая функция сохранения события
-            document.getElementById('saveEventBtn').addEventListener('click', function() {
-                const eventId = document.getElementById('eventId').value;
-                const eventTitle = document.getElementById('eventTitle').value.trim();
-                const eventType = document.getElementById('eventType').value;
-                const eventStart = document.getElementById('eventStart').value;
-                const eventEnd = document.getElementById('eventEnd').value;
-                const eventLocation = document.getElementById('eventLocation').value.trim();
-                const eventTeacher = document.getElementById('eventTeacher').value.trim();
-                const eventDescription = document.getElementById('eventDescription').value.trim();
-                const eventRepeat = document.getElementById('eventRepeat').value;
-                const repeatUntil = document.getElementById('repeatUntil').value;
-                
-                // Получаем выбранные группы (только те, в которых состоит пользователь)
-                const selectedGroups = [];
-                const userGroups = getUserGroups();
-                document.querySelectorAll('#eventGroupsContainer input[type="checkbox"]:checked').forEach(checkbox => {
-                    if (userGroups.includes(checkbox.value)) {
-                        selectedGroups.push(checkbox.value);
-                    }
-                });
-                
-                if (!eventTitle) {
-                    showNotification('Укажите название предмета');
-                    return;
-                }
-                
-                if (selectedGroups.length === 0) {
-                    showNotification('Выберите хотя бы одну группу');
-                    return;
-                }
-                
-                const newEvent = {
-                    id: eventId || Date.now().toString(),
-                    title: eventTitle,
-                    start: eventStart,
-                    end: eventEnd,
-                    extendedProps: {
-                        type: eventType,
-                        location: eventLocation,
-                        teacher: eventTeacher,
-                        description: eventDescription,
-                        groups: selectedGroups,
-                        createdBy: userId // Добавляем информацию о создателе
-                    }
+                return {
+                    html: `
+                        <div class="d-flex flex-column" style="gap: 2px;">
+                            <div class="d-flex align-items-center">
+                                <span class="me-1">${typeIcon}</span>
+                                <div class="fw-bold">${arg.event.title}</div>
+                            </div>
+                            ${timeText ? `<div class="small">${timeText}</div>` : ''}
+                            ${arg.event.extendedProps.location ? `<div class="small">${arg.event.extendedProps.location}</div>` : ''}
+                            ${groups ? `<div class="small">${groups}</div>` : ''}
+                        </div>
+                    `
                 };
+            },
+            eventClassNames: function(arg) {
+                return arg.event.extendedProps.type || 'other';
+            },
+            datesSet: function(info) {
+                updateCurrentDate(info.view);
+            }
+        });
+        
+        calendar.render();
+        
+        // Загрузка данных
+        function loadEvents() {
+            const savedEvents = localStorage.getItem('studentCalendarEvents');
+            return savedEvents ? JSON.parse(savedEvents) : [];
+        }
+        
+        function saveEvents(events) {
+            localStorage.setItem('studentCalendarEvents', JSON.stringify(events));
+        }
+        
+        function loadGroups() {
+            const savedGroups = localStorage.getItem('studentGroups') || '{}';
+            return JSON.parse(savedGroups);
+        }
+        
+        function saveGroups(groups) {
+            localStorage.setItem('studentGroups', JSON.stringify(groups));
+        }
+        
+        function loadGroupMembers() {
+            const savedMembers = localStorage.getItem('groupMembers') || '{}';
+            return JSON.parse(savedMembers);
+        }
+        
+        function saveGroupMembers(members) {
+            localStorage.setItem('groupMembers', JSON.stringify(members));
+        }
+        
+        // Проверка доступа пользователя к группе
+        function getUserGroups() {
+            const members = loadGroupMembers();
+            const userGroups = [];
+            
+            for (const groupName in members) {
+                if (members[groupName].includes(userId)) {
+                    userGroups.push(groupName);
+                }
+            }
+            
+            return userGroups;
+        }
+        
+        // Обновлённая функция инициализации групп
+        function initGroups() {
+            let groups = loadGroups();
+            const members = loadGroupMembers();
+            
+            // Если это первый запуск, создаём демо-группы
+            if (Object.keys(groups).length === 0) {
+                groups = {
+                    'ИВТ-21': [],
+                    'ПИ-21': [],
+                    'ФИИТ-21': []
+                };
+                saveGroups(groups);
+            }
+            
+            // Если пользователь ещё не состоит ни в одной группе
+            const userGroups = getUserGroups();
+            if (userGroups.length === 0 && userId) {
+                // Предлагаем первую доступную группу
+                const firstGroup = Object.keys(groups)[0];
+                if (!members[firstGroup]) members[firstGroup] = [];
+                members[firstGroup].push(userId);
+                saveGroupMembers(members);
                 
-                let events = loadEvents();
-                
-                if (eventId) {
-                    // Редактирование существующего события
-                    events = events.map(e => e.id === eventId ? newEvent : e);
-                    showNotification('Занятие обновлено');
-                } else {
-                    // Добавление нового события
-                    events.push(newEvent);
-                    showNotification('Занятие добавлено');
+                showNotification(`Вы добавлены в группу ${firstGroup}`);
+            }
+            
+            return groups;
+        }
+        
+        // Обновление интерфейса
+        function updateCurrentDate(view) {
+            document.getElementById('current-date').textContent = view.title;
+        }
+        
+        function renderUserGroups() {
+            const userGroups = getUserGroups();
+            const container = document.getElementById('userGroupsContainer');
+            container.innerHTML = '';
+            
+            userGroups.forEach(group => {
+                const badge = document.createElement('div');
+                badge.className = 'group-badge';
+                badge.innerHTML = `
+                    <span class="badge-text">${group}</span>
+                    <input type="checkbox" checked value="${group}" id="group-${group}" hidden>
+                `;
+                container.appendChild(badge);
+            });
+        }
+        
+        function renderGroupsModal() {
+            const groups = initGroups();
+            const userGroups = getUserGroups();
+            const members = loadGroupMembers();
+            
+            const myGroupsList = document.getElementById('myGroupsList');
+            const availableGroupsList = document.getElementById('availableGroupsList');
+            
+            myGroupsList.innerHTML = '';
+            availableGroupsList.innerHTML = '';
+            
+            // Добавляем группы пользователя
+            userGroups.forEach(groupName => {
+                const item = document.createElement('div');
+                item.className = 'list-group-item d-flex justify-content-between align-items-center';
+                item.innerHTML = `
+                    <span>${groupName}</span>
+                    <button class="btn btn-sm btn-outline-danger leave-group-btn" data-group="${groupName}">
+                        Покинуть
+                    </button>
+                `;
+                myGroupsList.appendChild(item);
+            });
+            
+            // Добавляем доступные группы
+            for (const groupName in groups) {
+                if (!userGroups.includes(groupName)) {
+                    const item = document.createElement('div');
+                    item.className = 'list-group-item d-flex justify-content-between align-items-center';
+                    item.innerHTML = `
+                        <span>${groupName}</span>
+                        <button class="btn btn-sm btn-primary join-group-btn" data-group="${groupName}">
+                            Вступить
+                        </button>
+                    `;
+                    availableGroupsList.appendChild(item);
+                }
+            }
+            
+            // Обработчики для кнопок вступления
+            document.querySelectorAll('.join-group-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const groupName = this.getAttribute('data-group');
+                    const members = loadGroupMembers();
                     
-                    // Обработка повторяющихся событий
-                    if (eventRepeat !== 'none' && repeatUntil) {
-                        const startDate = new Date(eventStart);
-                        const untilDate = new Date(repeatUntil);
-                        let nextDate;
+                    if (!members[groupName]) members[groupName] = [];
+                    if (!members[groupName].includes(userId)) {
+                        members[groupName].push(userId);
+                        saveGroupMembers(members);
+                        renderGroupsModal();
+                        renderUserGroups();
+                        calendar.refetchEvents();
+                        showNotification(`Вы вступили в группу ${groupName}`);
+                    }
+                });
+            });
+            
+            // Обработчики для кнопок выхода
+            document.querySelectorAll('.leave-group-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const groupName = this.getAttribute('data-group');
+                    const members = loadGroupMembers();
+                    
+                    if (members[groupName] && members[groupName].includes(userId)) {
+                        members[groupName] = members[groupName].filter(id => id !== userId);
+                        saveGroupMembers(members);
+                        renderGroupsModal();
+                        renderUserGroups();
+                        calendar.refetchEvents();
+                        showNotification(`Вы покинули группу ${groupName}`);
+                    }
+                });
+            });
+        }
+        
+        // Иконки для типов занятий
+        function getTypeIcon(type) {
+            const icons = {
+                'lecture': '📚',
+                'practice': '✏️',
+                'lab': '🔬',
+                'exam': '📝',
+                'test': '✅',
+                'other': '📅'
+            };
+            return icons[type] || '📅';
+        }
+        
+        // Модальные окна
+        function openAddModal(date) {
+            const modal = new bootstrap.Modal(document.getElementById('eventModal'));
+            document.getElementById('modalTitle').textContent = 'Добавить занятие';
+            document.getElementById('eventId').value = '';
+            document.getElementById('eventForm').reset();
+            document.getElementById('deleteEventBtn').style.display = 'none';
+            
+            // Установка даты и времени по умолчанию
+            const startDate = new Date(date);
+            startDate.setHours(9, 0, 0, 0);
+            
+            const endDate = new Date(startDate);
+            endDate.setHours(startDate.getHours() + 1);
+            
+            document.getElementById('eventStart').value = formatDateTimeForInput(startDate);
+            document.getElementById('eventEnd').value = formatDateTimeForInput(endDate);
+            
+            renderUserGroups();
+            modal.show();
+        }
+        
+        function openEditModal(event) {
+            const modal = new bootstrap.Modal(document.getElementById('eventModal'));
+            document.getElementById('modalTitle').textContent = 'Редактировать занятие';
+            document.getElementById('eventId').value = event.id;
+            document.getElementById('eventTitle').value = event.title;
+            document.getElementById('eventType').value = event.extendedProps.type || 'lecture';
+            document.getElementById('eventStart').value = formatDateTimeForInput(event.start);
+            document.getElementById('eventEnd').value = formatDateTimeForInput(event.end || new Date(event.start.getTime() + 60 * 60 * 1000));
+            document.getElementById('eventLocation').value = event.extendedProps.location || '';
+            document.getElementById('eventTeacher').value = event.extendedProps.teacher || '';
+            document.getElementById('eventDescription').value = event.extendedProps.description || '';
+            document.getElementById('deleteEventBtn').style.display = 'block';
+            
+            renderUserGroups();
+            
+            // Устанавливаем чекбоксы для групп события
+            if (event.extendedProps.groups) {
+                event.extendedProps.groups.forEach(group => {
+                    const checkbox = document.getElementById(`group-${group}`);
+                    if (checkbox) checkbox.checked = true;
+                });
+            }
+            
+            modal.show();
+        }
+        
+        function formatDateTimeForInput(date) {
+            if (!(date instanceof Date)) {
+                date = new Date(date);
+            }
+            const pad = num => num.toString().padStart(2, '0');
+            return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+        }
+        
+        // Обработчики событий
+        document.getElementById('prev-btn').addEventListener('click', function() {
+            calendar.prev();
+        });
+        
+        document.getElementById('next-btn').addEventListener('click', function() {
+            calendar.next();
+        });
+        
+        document.getElementById('today-btn').addEventListener('click', function() {
+            calendar.today();
+            calendar.changeView(calendar.view.type);
+        });
+        
+        document.querySelectorAll('.btn-view').forEach(btn => {
+            btn.addEventListener('click', function() {
+                document.querySelectorAll('.btn-view').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+                const view = this.getAttribute('data-view');
+                calendar.changeView(view);
+            });
+        });
+        
+        document.getElementById('add-event-btn').addEventListener('click', function() {
+            openAddModal(calendar.getDate());
+        });
+        
+        document.getElementById('groups-btn').addEventListener('click', function() {
+            renderGroupsModal();
+            new bootstrap.Modal(document.getElementById('groupsModal')).show();
+        });
+        
+        document.getElementById('addGroupBtn').addEventListener('click', function() {
+            const input = document.getElementById('newGroupInput');
+            const groupName = input.value.trim();
+            
+            if (groupName) {
+                const groups = loadGroups();
+                if (!groups[groupName]) {
+                    groups[groupName] = [];
+                    saveGroups(groups);
+                    renderGroupsModal();
+                    input.value = '';
+                    showNotification(`Группа ${groupName} создана`);
+                } else {
+                    showNotification('Группа с таким названием уже существует');
+                }
+            }
+        });
+        
+        document.getElementById('saveEventBtn').addEventListener('click', function() {
+            const eventId = document.getElementById('eventId').value;
+            const eventTitle = document.getElementById('eventTitle').value.trim();
+            const eventType = document.getElementById('eventType').value;
+            const eventStart = document.getElementById('eventStart').value;
+            const eventEnd = document.getElementById('eventEnd').value;
+            const eventLocation = document.getElementById('eventLocation').value.trim();
+            const eventTeacher = document.getElementById('eventTeacher').value.trim();
+            const eventDescription = document.getElementById('eventDescription').value.trim();
+            const eventRepeat = document.getElementById('eventRepeat').value;
+            const repeatUntil = document.getElementById('repeatUntil').value;
+            
+            // Получаем выбранные группы
+            const selectedGroups = [];
+            document.querySelectorAll('#userGroupsContainer input[type="checkbox"]:checked').forEach(checkbox => {
+                selectedGroups.push(checkbox.value);
+            });
+            
+            if (!eventTitle) {
+                showNotification('Укажите название предмета');
+                return;
+            }
+            
+            if (selectedGroups.length === 0) {
+                showNotification('Выберите хотя бы одну группу');
+                return;
+            }
+            
+            const newEvent = {
+                id: eventId || Date.now().toString(),
+                title: eventTitle,
+                start: eventStart,
+                end: eventEnd,
+                extendedProps: {
+                    type: eventType,
+                    location: eventLocation,
+                    teacher: eventTeacher,
+                    description: eventDescription,
+                    groups: selectedGroups,
+                    createdBy: userId
+                }
+            };
+            
+            let events = loadEvents();
+            
+            if (eventId) {
+                // Редактирование существующего события
+                events = events.map(e => e.id === eventId ? newEvent : e);
+                showNotification('Занятие обновлено');
+            } else {
+                // Добавление нового события
+                events.push(newEvent);
+                showNotification('Занятие добавлено');
+                
+                // Обработка повторяющихся событий
+                if (eventRepeat !== 'none' && repeatUntil) {
+                    const startDate = new Date(eventStart);
+                    const untilDate = new Date(repeatUntil);
+                    let nextDate;
+                    
+                    switch (eventRepeat) {
+                        case 'weekly':
+                            nextDate = new Date(startDate);
+                            nextDate.setDate(nextDate.getDate() + 7);
+                            break;
+                        case 'monthly':
+                            nextDate = new Date(startDate);
+                            nextDate.setMonth(nextDate.getMonth() + 1);
+                            break;
+                    }
+                    
+                    while (nextDate <= untilDate) {
+                        const recurringEvent = {
+                            ...newEvent,
+                            id: Date.now().toString(),
+                            start: nextDate.toISOString().slice(0, 16),
+                            end: new Date(new Date(eventEnd).getTime() + (nextDate - startDate)).toISOString().slice(0, 16)
+                        };
+                        
+                        events.push(recurringEvent);
                         
                         switch (eventRepeat) {
                             case 'weekly':
-                                nextDate = new Date(startDate);
                                 nextDate.setDate(nextDate.getDate() + 7);
                                 break;
                             case 'monthly':
-                                nextDate = new Date(startDate);
                                 nextDate.setMonth(nextDate.getMonth() + 1);
                                 break;
                         }
-                        
-                        while (nextDate <= untilDate) {
-                            const recurringEvent = {
-                                ...newEvent,
-                                id: Date.now().toString(),
-                                start: nextDate.toISOString().slice(0, 16),
-                                end: new Date(new Date(eventEnd).getTime() + (nextDate - startDate)).toISOString().slice(0, 16)
-                            };
-                            
-                            events.push(recurringEvent);
-                            
-                            switch (eventRepeat) {
-                                case 'weekly':
-                                    nextDate.setDate(nextDate.getDate() + 7);
-                                    break;
-                                case 'monthly':
-                                    nextDate.setMonth(nextDate.getMonth() + 1);
-                                    break;
-                            }
-                        }
                     }
                 }
+            }
+            
+            saveEvents(events);
+            calendar.refetchEvents();
+            
+            // Автоматическое закрытие модального окна через 1 секунду
+            setTimeout(() => {
+                bootstrap.Modal.getInstance(document.getElementById('eventModal')).hide();
+            }, 1000);
+        });
+        
+        document.getElementById('deleteEventBtn').addEventListener('click', function() {
+            if (confirm('Вы уверены, что хотите удалить это занятие?')) {
+                const eventId = document.getElementById('eventId').value;
+                let events = loadEvents();
+                events = events.filter(e => e.id !== eventId);
                 
                 saveEvents(events);
                 calendar.refetchEvents();
                 
-                // Автоматическое закрытие модального окна через 1 секунду
-                setTimeout(() => {
-                    bootstrap.Modal.getInstance(document.getElementById('eventModal')).hide();
-                }, 1000);
-            });
-            
-            // Обновлённая фильтрация событий
-            calendar.setOption('eventDidMount', function(info) {
-                const selectedGroup = document.getElementById('groupSelect').value;
-                const userGroups = getUserGroups();
-                
-                // Проверяем доступ пользователя к событию
-                const eventGroups = info.event.extendedProps.groups || [];
-                const hasAccess = eventGroups.some(group => userGroups.includes(group));
-                
-                if (!hasAccess) {
-                    info.el.style.display = 'none';
-                    return;
-                }
-                
-                if (selectedGroup !== 'all') {
-                    if (!eventGroups.includes(selectedGroup)) {
-                        info.el.style.display = 'none';
-                    }
-                }
-            });
-            
-            // Инициализация при загрузке
-            updateGroupSelect();
-            
-            // Показываем приветственное сообщение
-            if (userName) {
-                setTimeout(() => {
-                    showNotification(`Добро пожаловать, ${userName}!`);
-                }, 1000);
+                bootstrap.Modal.getInstance(document.getElementById('eventModal')).hide();
+                showNotification('Занятие удалено');
             }
         });
-    </script>
+        
+        document.getElementById('eventRepeat').addEventListener('change', function() {
+            const repeatUntilContainer = document.getElementById('repeatUntilContainer');
+            if (this.value !== 'none') {
+                               repeatUntilContainer.style.display = 'block';
+                
+                // Установка даты окончания повторений (по умолчанию +1 месяц)
+                const startDate = new Date(document.getElementById('eventStart').value);
+                const untilDate = new Date(startDate);
+                untilDate.setMonth(untilDate.getMonth() + 1);
+                document.getElementById('repeatUntil').value = untilDate.toISOString().slice(0, 10);
+            } else {
+                repeatUntilContainer.style.display = 'none';
+            }
+        });
+
+        // Фильтрация событий по группам пользователя
+        calendar.setOption('eventDidMount', function(info) {
+            const userGroups = getUserGroups();
+            const eventGroups = info.event.extendedProps.groups || [];
+            
+            // Проверяем доступ пользователя к событию
+            const hasAccess = eventGroups.some(group => userGroups.includes(group));
+            
+            if (!hasAccess) {
+                info.el.style.display = 'none';
+            }
+        });
+
+        // Инициализация при загрузке
+        initGroups();
+        renderUserGroups();
+        renderGroupsModal();
+        
+        // Показываем приветственное сообщение
+        if (userName) {
+            setTimeout(() => {
+                showNotification(`Добро пожаловать, ${userName}!`);
+            }, 1000);
+        }
+
+        // Применяем тему Telegram
+        function applyTheme() {
+            document.documentElement.style.setProperty('--tg-bg-color', tg.themeParams.bg_color || '#ffffff');
+            document.documentElement.style.setProperty('--tg-text-color', tg.themeParams.text_color || '#000000');
+            document.documentElement.style.setProperty('--tg-hint-color', tg.themeParams.hint_color || '#7d7d7d');
+            document.documentElement.style.setProperty('--tg-link-color', tg.themeParams.link_color || '#3390ec');
+            document.documentElement.style.setProperty('--tg-button-color', tg.themeParams.button_color || '#3390ec');
+            document.documentElement.style.setProperty('--tg-button-text-color', tg.themeParams.button_text_color || '#ffffff');
+            document.documentElement.style.setProperty('--tg-secondary-bg-color', tg.themeParams.secondary_bg_color || '#f0f0f0');
+        }
+
+        // Применяем тему при загрузке и при изменении
+        applyTheme();
+        tg.onEvent('themeChanged', applyTheme);
+
+        // Обработчик для кнопки закрытия WebApp
+        document.getElementById('close-btn').addEventListener('click', function() {
+            tg.close();
+        });
+
+        // Функция для экспорта данных
+        document.getElementById('export-btn').addEventListener('click', function() {
+            const data = {
+                events: loadEvents(),
+                groups: loadGroups(),
+                members: loadGroupMembers()
+            };
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(data, null, 2));
+            const downloadAnchor = document.createElement('a');
+            downloadAnchor.setAttribute("href", dataStr);
+            downloadAnchor.setAttribute("download", "student_calendar_backup.json");
+            document.body.appendChild(downloadAnchor);
+            downloadAnchor.click();
+            document.body.removeChild(downloadAnchor);
+            showNotification('Данные экспортированы');
+        });
+
+        // Функция для импорта данных
+        document.getElementById('import-btn').addEventListener('click', function() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.json';
+            
+            input.onchange = e => {
+                const file = e.target.files[0];
+                const reader = new FileReader();
+                
+                reader.onload = function(e) {
+                    try {
+                        const data = JSON.parse(e.target.result);
+                        if (data.events) localStorage.setItem('studentCalendarEvents', JSON.stringify(data.events));
+                        if (data.groups) localStorage.setItem('studentGroups', JSON.stringify(data.groups));
+                        if (data.members) localStorage.setItem('groupMembers', JSON.stringify(data.members));
+                        
+                        calendar.refetchEvents();
+                        renderGroupsModal();
+                        renderUserGroups();
+                        showNotification('Данные успешно импортированы');
+                    } catch (error) {
+                        showNotification('Ошибка при импорте файла');
+                    }
+                };
+                
+                reader.readAsText(file);
+            };
+            
+            input.click();
+        });
+    });
+</script>
 </body>
 </html>
