@@ -307,19 +307,6 @@
             .fc .fc-daygrid-day-number {
                 font-size: 0.8em;
             }
-            /* Уведомления */
-.alert {
-    border-radius: 12px;
-    padding: 12px 16px;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-    position: fixed;
-    bottom: 20px;
-    left: 50%;
-    transform: translateX(-50%);
-    z-index: 1100;
-    opacity: 1;
-    transition: opacity 0.5s ease;
-}
         }
     </style>
 </head>
@@ -344,13 +331,12 @@
         </div>
 
         <div class="navigation-buttons">
-    <button id="prev-btn">←</button>
-    <div>
-        <h5 id="current-date"></h5>
-        <small class="text-muted" id="current-group-info"></small>
-    </div>
-    <button id="next-btn">→</button>
-</div>
+            <button id="prev-btn">←</button>
+            <h5 id="current-date"></h5>
+            <button id="next-btn">→</button>
+        </div>
+
+        <div id="calendar"></div>
 
         <div class="fixed-bottom-bar">
             <button class="btn btn-outline-primary" id="today-btn">Сегодня</button>
@@ -447,28 +433,30 @@
     </div>
 
     <!-- Модальное окно для управления группами -->
-   <div class="modal fade" id="groupsModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Управление группами</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <div class="alert alert-info">
-                    Текущая группа: <strong id="currentGroupDisplay"></strong>
+    <div class="modal fade" id="groupsModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Управление группами</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <div class="input-group mb-3">
-                    <input type="password" class="form-control" id="groupPasswordInput" placeholder="Пароль группы">
-                    <button class="btn btn-outline-secondary" id="changeGroupBtn">Сменить</button>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <div class="input-group">
+                            <input type="text" class="form-control" id="newGroupInput" placeholder="Название группы">
+                            <button class="btn btn-primary" id="addGroupBtn">Добавить</button>
+                        </div>
+                    </div>
+                    <div id="groupsList">
+                        <!-- Список групп будет здесь -->
+                    </div>
                 </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Закрыть</button>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Закрыть</button>
+                </div>
             </div>
         </div>
     </div>
-</div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@fullcalendar/core@6.1.8/index.global.min.js"></script>
@@ -790,16 +778,6 @@
                 const eventDescription = document.getElementById('eventDescription').value.trim();
                 const eventRepeat = document.getElementById('eventRepeat').value;
                 const repeatUntil = document.getElementById('repeatUntil').value;
-                const notification = document.createElement('div');
-notification.className = 'alert alert-success';
-notification.innerHTML = `
-    <div class="d-flex align-items-center">
-        <svg width="20" height="20" class="me-2" fill="currentColor" viewBox="0 0 16 16">
-            <path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0zm-3.97-3.03a.75.75 0 0 0-1.08.022L7.477 9.417 5.384 7.323a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0 1.079-.02l3.992-4.99a.75.75 0 0 0-.01-1.05z"/>
-        </svg>
-        Занятие сохранено
-    </div>
-`;
                 
                 // Получаем выбранные группы
                 const selectedGroups = [];
@@ -930,28 +908,5 @@ notification.innerHTML = `
             updateGroupSelect();
         });
     </script>
-    <div class="modal fade" id="authModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Вход в группу</h5>
-            </div>
-            <div class="modal-body">
-                <div class="mb-3">
-                    <label for="groupSelectAuth" class="form-label">Выберите группу</label>
-                    <select class="form-select" id="groupSelectAuth"></select>
-                </div>
-                <div class="mb-3">
-                    <label for="groupPasswordAuth" class="form-label">Пароль группы</label>
-                    <input type="password" class="form-control" id="groupPasswordAuth">
-                </div>
-                <div id="authError" class="alert alert-danger d-none"></div>
-            </div>
-            <div class="modal-footer">
-                <button id="authSubmitBtn" class="btn btn-primary">Войти</button>
-            </div>
-        </div>
-    </div>
-</div>
 </body>
 </html>
