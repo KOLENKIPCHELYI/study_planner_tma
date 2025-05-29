@@ -249,6 +249,39 @@
             border-radius: var(--tg-border-radius);
         }
         
+        .event-list-item {
+            padding: 12px;
+            border-bottom: 1px solid var(--tg-secondary-bg-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .event-list-item:last-child {
+            border-bottom: none;
+        }
+        
+        .event-list-date {
+            font-weight: 600;
+            color: var(--tg-button-color);
+            min-width: 80px;
+        }
+        
+        .event-list-details {
+            flex-grow: 1;
+            padding: 0 12px;
+        }
+        
+        .event-list-title {
+            font-weight: 500;
+            margin-bottom: 4px;
+        }
+        
+        .event-list-meta {
+            font-size: 0.85rem;
+            color: var(--tg-hint-color);
+        }
+        
         @media (max-width: 576px) {
             .dashboard-container {
                 padding: 12px;
@@ -260,6 +293,15 @@
             
             .stats-value {
                 font-size: 1.5rem;
+            }
+            
+            .event-list-item {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            
+            .event-list-date {
+                margin-bottom: 8px;
             }
         }
     </style>
@@ -303,11 +345,6 @@
                     <i class="fas fa-list-ul me-1"></i> Список
                 </button>
             </li>
-            <li class="nav-item" role="presentation">
-                <button class="nav-link" id="groups-tab" data-bs-toggle="tab" data-bs-target="#groups-tab-pane" type="button" role="tab">
-                    <i class="fas fa-users me-1"></i> Группы
-                </button>
-            </li>
         </ul>
         
         <div class="tab-content" id="dashboardTabContent">
@@ -319,11 +356,6 @@
             <div class="tab-pane fade" id="list-tab-pane" role="tabpanel">
                 <div class="calendar-container">
                     <div id="event-list"></div>
-                </div>
-            </div>
-            <div class="tab-pane fade" id="groups-tab-pane" role="tabpanel">
-                <div class="calendar-container">
-                    <div id="groups-management"></div>
                 </div>
             </div>
         </div>
@@ -422,16 +454,17 @@
             function showNotification(message, duration = 3000) {
                 const notification = document.getElementById('notification');
                 notification.textContent = message;
-                notification.classList.add('show');
-                
-                setTimeout(() => {
-                    notification.classList.remove('show');
-                }, duration);
-            }
+                           notification.textContent = message;
+            notification.classList.add('show');
             
-            // Инициализация календаря
-            const calendarEl = document.getElementById('calendar');       
-            const calendar = new FullCalendar.Calendar(calendarEl, {
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, duration);
+        }
+        
+        // Инициализация календаря
+        const calendarEl = document.getElementById('calendar');
+        const calendar = new FullCalendar.Calendar(calendarEl, {
             initialView: 'dayGridMonth',
             headerToolbar: false,
             locale: 'ru',
@@ -469,6 +502,7 @@
             datesSet: function(info) {
                 updateCurrentDate(info.view);
                 updateStats();
+                renderEventList();
             }
         });
         
@@ -484,37 +518,95 @@
             localStorage.setItem('studentCalendarEvents', JSON.stringify(events));
         }
         
-        function loadGroups() {
-            const savedGroups = localStorage.getItem('studentGroups') || '{}';
-            return JSON.parse(savedGroups);
-        }
-        
-        function saveGroups(groups) {
-            localStorage.setItem('studentGroups', JSON.stringify(groups));
-        }
-        
-        function loadGroupMembers() {
-            const savedMembers = localStorage.getItem('groupMembers') || '{}';
-            return JSON.parse(savedMembers);
-        }
-        
-        function saveGroupMembers(members) {
-            localStorage.setItem('groupMembers', JSON.stringify(members));
-        }
-        
         // Обновление статистики
         function updateStats() {
             const events = loadEvents();
             const now = new Date();
             const upcomingEvents = events.filter(e => new Date(e.start) > now);
             const exams = events.filter(e => e.extendedProps.type === 'exam' && new Date(e.start) > now);
-            const userGroups = Object.keys(loadGroupMembers()).filter(group => 
-                loadGroupMembers()[group].includes(userId)
-            );
             
             document.getElementById('events-count').textContent = upcomingEvents.length;
-            document.getElementById('groups-count').textContent = userGroups.length;
             document.getElementById('exams-count').textContent = exams.length;
+        }
+        
+        // Рендер списка событий
+        function renderEventList() {
+            const events = loadEvents();
+            const now = new Date();
+            const upcomingEvents = events
+                .filter(e => new Date(e.start) > now)
+                .sort((a, b) => new Date(a.start) - new Date(b.start));
+            
+            const eventListEl = document.getElementById('event-list');
+            eventListEl.innerHTML = '';
+            
+            if (upcomingEvents.length === 0) {
+                eventListEl.innerHTML = `
+                    <div class="text-center py-4 text-muted">
+                        <i class="fas fa-calendar-plus fa-2x mb-3"></i>
+                        <p>Нет предстоящих занятий</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            upcomingEvents.forEach(event => {
+                const eventEl = document.createElement('div');
+                eventEl.className = 'event-list-item';
+                
+                const startDate = new Date(event.start);
+                const options = { 
+                    weekday: 'short', 
+                    day: 'numeric', 
+                    month: 'short',
+                    hour: '2-digit', 
+                    minute: '2-digit'
+                };
+                
+                eventEl.innerHTML = `
+                    <div class="event-list-date">
+                        ${startDate.toLocaleDateString('ru-RU', options)}
+                    </div>
+                    <div class="event-list-details">
+                        <div class="event-list-title">
+                            <span class="me-2">${getTypeIcon(event.extendedProps.type)}</span>
+                            ${event.title}
+                        </div>
+                        <div class="event-list-meta">
+                            ${event.extendedProps.location ? `<span class="me-3"><i class="fas fa-map-marker-alt"></i> ${event.extendedProps.location}</span>` : ''}
+                            ${event.extendedProps.teacher ? `<span><i class="fas fa-chalkboard-teacher"></i> ${event.extendedProps.teacher}</span>` : ''}
+                        </div>
+                    </div>
+                    <button class="btn btn-sm btn-outline-primary edit-event-btn" data-id="${event.id}">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                `;
+                
+                eventListEl.appendChild(eventEl);
+            });
+            
+            // Обработчики для кнопок редактирования
+            document.querySelectorAll('.edit-event-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const eventId = this.getAttribute('data-id');
+                    const events = loadEvents();
+                    const event = events.find(e => e.id === eventId);
+                    if (event) {
+                        openEditModal({
+                            id: event.id,
+                            title: event.title,
+                            start: event.start,
+                            end: event.end,
+                            extendedProps: {
+                                type: event.extendedProps.type,
+                                location: event.extendedProps.location,
+                                teacher: event.extendedProps.teacher,
+                                description: event.extendedProps.description
+                            }
+                        });
+                    }
+                });
+            });
         }
         
         // Иконки для типов занятий
@@ -623,6 +715,7 @@
             saveEvents(events);
             calendar.refetchEvents();
             updateStats();
+            renderEventList();
             
             // Автоматическое закрытие модального окна через 1 секунду
             setTimeout(() => {
@@ -639,6 +732,7 @@
                 saveEvents(events);
                 calendar.refetchEvents();
                 updateStats();
+                renderEventList();
                 
                 bootstrap.Modal.getInstance(document.getElementById('eventModal')).hide();
                 showNotification('Занятие удалено');
@@ -647,6 +741,7 @@
         
         // Инициализация при загрузке
         updateStats();
+        renderEventList();
         
         // Показываем приветственное сообщение
         if (userName) {
@@ -673,5 +768,4 @@
     });
 </script>
 </body> 
-</html> 
-            
+</html>
