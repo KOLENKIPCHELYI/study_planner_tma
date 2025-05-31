@@ -1,11 +1,16 @@
-// Данные приложения
+// Данные
 let tasks = JSON.parse(localStorage.getItem('tasks')) || [];
-let stats = {
+let stats = JSON.parse(localStorage.getItem('stats')) || {
     studyTime: '0h 0m',
     tasksCompleted: 0,
     sessions: 0,
     efficiency: '0%'
 };
+
+// Таймер Pomodoro
+let timerInterval;
+let timerTime = 25 * 60; // 25 минут
+let isTimerRunning = false;
 
 // DOM-элементы
 const taskInput = document.getElementById('task-input');
@@ -14,6 +19,9 @@ const addTaskBtn = document.getElementById('add-task-btn');
 const tasksContainer = document.getElementById('tasks-container');
 const statsContainer = document.getElementById('stats-container');
 const dailyQuote = document.getElementById('daily-quote');
+const timerDisplay = document.getElementById('timer');
+const startTimerBtn = document.getElementById('start-timer-btn');
+const resetTimerBtn = document.getElementById('reset-timer-btn');
 
 // Инициализация
 function init() {
@@ -22,6 +30,7 @@ function init() {
     renderTasks();
     loadQuote();
     setupEventListeners();
+    updateTimerDisplay();
 }
 
 // Обновление даты
@@ -69,49 +78,98 @@ function renderTasks() {
     `).join('');
 }
 
-// Добавление задачи
+// Управление задачами
 function addTask() {
     const text = taskInput.value.trim();
     const subject = subjectSelect.value;
     
     if (text) {
-        const newTask = {
+        tasks.push({
             id: Date.now(),
             text,
             subject,
             completed: false
-        };
-        
-        tasks.push(newTask);
-        saveTasks();
+        });
+        saveData();
         taskInput.value = '';
+        renderTasks();
+    }
+}
+
+function deleteTask(id) {
+    tasks = tasks.filter(task => task.id !== id);
+    saveData();
+    renderTasks();
+}
+
+function completeTask(id) {
+    const task = tasks.find(t => t.id === id);
+    if (task) {
+        task.completed = !task.completed;
+        saveData();
         renderTasks();
         updateStats();
     }
 }
 
-// Удаление задачи
-function deleteTask(id) {
-    tasks = tasks.filter(task => task.id !== id);
-    saveTasks();
-    renderTasks();
-    updateStats();
+// Таймер Pomodoro
+function startTimer() {
+    if (isTimerRunning) {
+        clearInterval(timerInterval);
+        isTimerRunning = false;
+        startTimerBtn.textContent = 'Старт';
+    } else {
+        timerInterval = setInterval(() => {
+            timerTime--;
+            updateTimerDisplay();
+            if (timerTime <= 0) {
+                clearInterval(timerInterval);
+                alert('Таймер завершён!');
+                updateStudyTime();
+                resetTimer();
+            }
+        }, 1000);
+        isTimerRunning = true;
+        startTimerBtn.textContent = 'Пауза';
+    }
 }
 
-// Обновление статистики
-function updateStats() {
-    stats.tasksCompleted = tasks.filter(t => t.completed).length;
-    stats.sessions = tasks.length;
-    localStorage.setItem('stats', JSON.stringify(stats));
+function resetTimer() {
+    clearInterval(timerInterval);
+    timerTime = 25 * 60;
+    isTimerRunning = false;
+    startTimerBtn.textContent = 'Старт';
+    updateTimerDisplay();
+}
+
+function updateTimerDisplay() {
+    const minutes = Math.floor(timerTime / 60);
+    const seconds = timerTime % 60;
+    timerDisplay.textContent = `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
+}
+
+function updateStudyTime() {
+    const [hours, minutes] = stats.studyTime.split('h ');
+    const newMinutes = parseInt(minutes) + 25;
+    stats.studyTime = `${hours}h ${newMinutes}m`;
+    saveData();
     renderStats();
 }
 
-// Сохранение задач в LocalStorage
-function saveTasks() {
+// Вспомогательные функции
+function saveData() {
     localStorage.setItem('tasks', JSON.stringify(tasks));
+    localStorage.setItem('stats', JSON.stringify(stats));
 }
 
-// Загрузка цитаты дня
+function updateStats() {
+    stats.tasksCompleted = tasks.filter(t => t.completed).length;
+    stats.sessions = tasks.length;
+    stats.efficiency = `${Math.floor((stats.tasksCompleted / stats.sessions) * 100) || 0}%`;
+    saveData();
+    renderStats();
+}
+
 function loadQuote() {
     const quotes = [
         "The only limit to our realization of tomorrow is our doubts of today.",
@@ -121,7 +179,6 @@ function loadQuote() {
     dailyQuote.textContent = quotes[Math.floor(Math.random() * quotes.length)];
 }
 
-// Вспомогательные функции
 function getSubjectName(key) {
     const subjects = {
         math: 'Математика',
@@ -134,23 +191,20 @@ function getSubjectName(key) {
 // Обработчики событий
 function setupEventListeners() {
     addTaskBtn.addEventListener('click', addTask);
-    taskInput.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') addTask();
-    });
+    taskInput.addEventListener('keypress', (e) => e.key === 'Enter' && addTask());
     
     tasksContainer.addEventListener('click', (e) => {
         const taskItem = e.target.closest('.task-item');
         if (!taskItem) return;
         
         const id = parseInt(taskItem.dataset.id);
-        
-        if (e.target.classList.contains('delete-btn')) {
-            deleteTask(id);
-        } else if (e.target.classList.contains('complete-btn')) {
-            completeTask(id);
-        }
+        if (e.target.classList.contains('delete-btn')) deleteTask(id);
+        if (e.target.classList.contains('complete-btn')) completeTask(id);
     });
+
+    startTimerBtn.addEventListener('click', startTimer);
+    resetTimerBtn.addEventListener('click', resetTimer);
 }
 
-// Запуск приложения
+// Запуск
 init();
