@@ -1,53 +1,71 @@
+const ADMIN_EMAIL = "your_admin@email.com"; // Замените на ваш email
 const ADMIN_PASSWORD = "study2024"; // Замените на ваш пароль
+
+// Элементы интерфейса
 const authScreen = document.getElementById('auth-screen');
 const appContainer = document.getElementById('app-container');
 const loginBtn = document.getElementById('login-btn');
 const logoutBtn = document.getElementById('logout-btn');
-const groupSelect = document.getElementById('group-select');
-const currentGroup = document.getElementById('current-group');
 
-// Проверка авторизации при загрузке
-document.addEventListener('DOMContentLoaded', () => {
-    const savedGroup = localStorage.getItem('currentGroup');
-    const isAuthenticated = localStorage.getItem('authenticated') === 'true';
+// Инициализация Firebase Auth
+function initAuth() {
+    firebase.auth().onAuthStateChanged((user) => {
+        if (user) {
+            // Пользователь авторизован
+            const currentGroup = localStorage.getItem('currentGroup');
+            if (currentGroup) {
+                authScreen.style.display = 'none';
+                appContainer.style.display = 'block';
+                document.getElementById('current-group').textContent = getGroupName(currentGroup);
+            }
+        } else {
+            // Пользователь не авторизован
+            authScreen.style.display = 'flex';
+            appContainer.style.display = 'none';
+        }
+    });
+}
 
-    if (isAuthenticated && savedGroup) {
-        authScreen.style.display = 'none';
-        appContainer.style.display = 'block';
-        currentGroup.textContent = getGroupName(savedGroup);
-    }
-});
-
-// Вход
-loginBtn.addEventListener('click', () => {
+// Вход для администратора
+loginBtn.addEventListener('click', async () => {
     const password = document.getElementById('admin-password').value;
-    const group = groupSelect.value;
+    const group = document.getElementById('group-select').value;
 
-    if (password === ADMIN_PASSWORD) {
+    if (password !== ADMIN_PASSWORD) {
+        alert("Неверный пароль!");
+        return;
+    }
+
+    try {
+        // Аутентификация в Firebase
+        await firebase.auth().signInWithEmailAndPassword(ADMIN_EMAIL, password);
+        
         localStorage.setItem('authenticated', 'true');
         localStorage.setItem('currentGroup', group);
-        authScreen.style.display = 'none';
-        appContainer.style.display = 'block';
-        currentGroup.textContent = getGroupName(group);
-    } else {
-        alert('Неверный пароль!');
+        location.reload(); // Перезагрузка для инициализации данных
+    } catch (error) {
+        alert("Ошибка входа: " + error.message);
     }
 });
 
-// Выход
+// Выход из системы
 logoutBtn.addEventListener('click', () => {
-    localStorage.removeItem('authenticated');
-    localStorage.removeItem('currentGroup');
-    authScreen.style.display = 'flex';
-    appContainer.style.display = 'none';
-    document.getElementById('admin-password').value = '';
+    firebase.auth().signOut().then(() => {
+        localStorage.clear();
+        authScreen.style.display = 'flex';
+        appContainer.style.display = 'none';
+    });
 });
 
-// Получение названия группы
+// Вспомогательная функция
 function getGroupName(key) {
     const groups = {
         group1: 'Группа 1',
-        group2: 'Группа 2'
+        group2: 'Группа 2',
+        group3: 'Группа 3'
     };
     return groups[key] || key;
 }
+
+// Инициализация при загрузке
+document.addEventListener('DOMContentLoaded', initAuth);
