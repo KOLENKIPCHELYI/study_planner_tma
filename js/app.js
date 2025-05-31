@@ -1,4 +1,4 @@
-// Данные
+// Данные приложения
 let tasks = JSON.parse(localStorage.getItem('tasks')) || [];
 let stats = JSON.parse(localStorage.getItem('stats')) || {
     studyTime: '0h 0m',
@@ -7,11 +7,6 @@ let stats = JSON.parse(localStorage.getItem('stats')) || {
     efficiency: '0%'
 };
 
-// Таймер Pomodoro
-let timerInterval;
-let timerTime = 25 * 60; // 25 минут
-let isTimerRunning = false;
-
 // DOM-элементы
 const taskInput = document.getElementById('task-input');
 const subjectSelect = document.getElementById('subject-select');
@@ -19,18 +14,16 @@ const addTaskBtn = document.getElementById('add-task-btn');
 const tasksContainer = document.getElementById('tasks-container');
 const statsContainer = document.getElementById('stats-container');
 const dailyQuote = document.getElementById('daily-quote');
-const timerDisplay = document.getElementById('timer');
-const startTimerBtn = document.getElementById('start-timer-btn');
-const resetTimerBtn = document.getElementById('reset-timer-btn');
 
 // Инициализация
 function init() {
-    updateDate();
-    renderStats();
-    renderTasks();
-    loadQuote();
-    setupEventListeners();
-    updateTimerDisplay();
+    if (localStorage.getItem('authenticated') {
+        updateDate();
+        renderStats();
+        renderTasks();
+        loadQuote();
+        setupEventListeners();
+    }
 }
 
 // Обновление даты
@@ -64,121 +57,86 @@ function renderStats() {
 
 // Рендер задач
 function renderTasks() {
-    tasksContainer.innerHTML = tasks.map(task => `
+    const currentGroup = localStorage.getItem('currentGroup');
+    const groupTasks = tasks.filter(task => task.group === currentGroup);
+    
+    tasksContainer.innerHTML = groupTasks.map(task => `
         <div class="task-item" data-id="${task.id}">
             <div>
                 <div class="task-title">${task.text}</div>
                 <div class="task-subject">${getSubjectName(task.subject)}</div>
             </div>
             <div class="task-actions">
-                <button class="complete-btn">✓</button>
-                <button class="delete-btn">✕</button>
+                <button class="complete-btn">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                        <path d="M5 13L9 17L19 7" stroke="currentColor" stroke-width="2"/>
+                    </svg>
+                </button>
+                <button class="delete-btn">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                        <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" stroke-width="2"/>
+                    </svg>
+                </button>
             </div>
         </div>
     `).join('');
 }
 
-// Управление задачами
+// Добавление задачи
 function addTask() {
     const text = taskInput.value.trim();
     const subject = subjectSelect.value;
+    const group = localStorage.getItem('currentGroup');
     
-    if (text) {
-        tasks.push({
+    if (text && group) {
+        const newTask = {
             id: Date.now(),
             text,
             subject,
-            completed: false
-        });
-        saveData();
+            group,
+            completed: false,
+            createdAt: new Date().toISOString()
+        };
+        
+        tasks.push(newTask);
+        saveTasks();
         taskInput.value = '';
-        renderTasks();
-    }
-}
-
-function deleteTask(id) {
-    tasks = tasks.filter(task => task.id !== id);
-    saveData();
-    renderTasks();
-}
-
-function completeTask(id) {
-    const task = tasks.find(t => t.id === id);
-    if (task) {
-        task.completed = !task.completed;
-        saveData();
         renderTasks();
         updateStats();
     }
 }
 
-// Таймер Pomodoro
-function startTimer() {
-    if (isTimerRunning) {
-        clearInterval(timerInterval);
-        isTimerRunning = false;
-        startTimerBtn.textContent = 'Старт';
-    } else {
-        timerInterval = setInterval(() => {
-            timerTime--;
-            updateTimerDisplay();
-            if (timerTime <= 0) {
-                clearInterval(timerInterval);
-                alert('Таймер завершён!');
-                updateStudyTime();
-                resetTimer();
-            }
-        }, 1000);
-        isTimerRunning = true;
-        startTimerBtn.textContent = 'Пауза';
-    }
-}
-
-function resetTimer() {
-    clearInterval(timerInterval);
-    timerTime = 25 * 60;
-    isTimerRunning = false;
-    startTimerBtn.textContent = 'Старт';
-    updateTimerDisplay();
-}
-
-function updateTimerDisplay() {
-    const minutes = Math.floor(timerTime / 60);
-    const seconds = timerTime % 60;
-    timerDisplay.textContent = `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
-}
-
-function updateStudyTime() {
-    const [hours, minutes] = stats.studyTime.split('h ');
-    const newMinutes = parseInt(minutes) + 25;
-    stats.studyTime = `${hours}h ${newMinutes}m`;
-    saveData();
-    renderStats();
-}
-
-// Вспомогательные функции
-function saveData() {
-    localStorage.setItem('tasks', JSON.stringify(tasks));
-    localStorage.setItem('stats', JSON.stringify(stats));
-}
-
+// Обновление статистики
 function updateStats() {
-    stats.tasksCompleted = tasks.filter(t => t.completed).length;
-    stats.sessions = tasks.length;
-    stats.efficiency = `${Math.floor((stats.tasksCompleted / stats.sessions) * 100) || 0}%`;
-    saveData();
+    const currentGroup = localStorage.getItem('currentGroup');
+    const groupTasks = tasks.filter(task => task.group === currentGroup);
+    
+    stats.tasksCompleted = groupTasks.filter(t => t.completed).length;
+    stats.sessions = groupTasks.length;
+    stats.efficiency = groupTasks.length > 0 
+        ? `${Math.round((stats.tasksCompleted / groupTasks.length) * 100)}%` 
+        : '0%';
+    
+    localStorage.setItem('stats', JSON.stringify(stats));
     renderStats();
 }
 
+// Сохранение задач
+function saveTasks() {
+    localStorage.setItem('tasks', JSON.stringify(tasks));
+}
+
+// Загрузка цитаты
 function loadQuote() {
     const quotes = [
-        "The only limit to our realization of tomorrow is our doubts of today.",
-        "My attention is lowered into what Theo knows is not a projector of the paper or present, but that which moves on at night.",
-        "Education is the most powerful weapon which you can use to change the world."
+        "Образование — самое мощное оружие, которое можно использовать, чтобы изменить мир. — Нельсон Мандела",
+        "Учитесь так, словно вы постоянно ощущаете нехватку своих знаний. — Конфуций",
+        "Наука — это организованные знания, мудрость — это организованная жизнь. — Иммануил Кант"
     ];
     dailyQuote.textContent = quotes[Math.floor(Math.random() * quotes.length)];
 }
 
+// Вспомогательные функции
 function getSubjectName(key) {
     const subjects = {
         math: 'Математика',
@@ -198,13 +156,14 @@ function setupEventListeners() {
         if (!taskItem) return;
         
         const id = parseInt(taskItem.dataset.id);
-        if (e.target.classList.contains('delete-btn')) deleteTask(id);
-        if (e.target.classList.contains('complete-btn')) completeTask(id);
+        
+        if (e.target.closest('.delete-btn')) {
+            deleteTask(id);
+        } else if (e.target.closest('.complete-btn')) {
+            completeTask(id);
+        }
     });
-
-    startTimerBtn.addEventListener('click', startTimer);
-    resetTimerBtn.addEventListener('click', resetTimer);
 }
 
-// Запуск
+// Запуск приложения
 init();
