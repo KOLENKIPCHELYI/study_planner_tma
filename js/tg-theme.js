@@ -3,10 +3,19 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!tg) return;
 
     tg.expand();
-    
+    tg.enableClosingConfirmation();
+
     // Применение темы Telegram
-    document.documentElement.style.setProperty('--bg-primary', tg.themeParams.bg_color || '#ffffff');
-    document.documentElement.style.setProperty('--text-primary', tg.themeParams.text_color || '#212121');
-    document.documentElement.style.setProperty('--bg-secondary', tg.themeParams.secondary_bg_color || '#f5f5f5');
-    document.documentElement.style.setProperty('--accent', tg.themeParams.button_color || '#34a4ff');
+    if (tg.colorScheme === 'dark') {
+        document.documentElement.style.setProperty('--bg-primary', '#1a1a1a');
+        document.documentElement.style.setProperty('--bg-secondary', '#2d2d2d');
+        document.documentElement.style.setProperty('--text-primary', '#f8f9fa');
+    }
+
+    // Кнопка "Назад" в Telegram
+    tg.BackButton.onClick(() => {
+        if (appContainer.style.display === 'block') {
+            logoutBtn.click();
+        }
+    });
 });
