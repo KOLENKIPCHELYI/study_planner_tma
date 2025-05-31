@@ -1,169 +1,143 @@
-// Данные приложения
+// Расширенные данные приложения
 let tasks = JSON.parse(localStorage.getItem('tasks')) || [];
+let sessions = JSON.parse(localStorage.getItem('sessions')) || [];
 let stats = JSON.parse(localStorage.getItem('stats')) || {
-    studyTime: '0h 0m',
+    totalStudyTime: 0, // в секундах
     tasksCompleted: 0,
-    sessions: 0,
-    efficiency: '0%'
+    sessionsCompleted: 0,
+    efficiency: 0
 };
 
-// DOM-элементы
-const taskInput = document.getElementById('task-input');
-const subjectSelect = document.getElementById('subject-select');
-const addTaskBtn = document.getElementById('add-task-btn');
-const tasksContainer = document.getElementById('tasks-container');
-const statsContainer = document.getElementById('stats-container');
-const dailyQuote = document.getElementById('daily-quote');
+// Элементы таймера
+let timerInterval;
+let timerSeconds = 0;
+const timerDisplay = document.getElementById('timer');
+const startTimerBtn = document.getElementById('start-timer-btn');
+const stopTimerBtn = document.getElementById('stop-timer-btn');
+const saveTimerBtn = document.getElementById('save-timer-btn');
 
-// Инициализация
-function init() {
-    if (localStorage.getItem('authenticated') {
-        updateDate();
-        renderStats();
-        renderTasks();
-        loadQuote();
-        setupEventListeners();
+// Инициализация таймера
+function initTimer() {
+    startTimerBtn.addEventListener('click', startTimer);
+    stopTimerBtn.addEventListener('click', stopTimer);
+    saveTimerBtn.addEventListener('click', saveSession);
+}
+
+// Запуск таймера
+function startTimer() {
+    if (!timerInterval) {
+        timerInterval = setInterval(() => {
+            timerSeconds++;
+            updateTimerDisplay();
+        }, 1000);
     }
 }
 
-// Обновление даты
-function updateDate() {
-    const options = { weekday: 'short', day: 'numeric' };
-    document.getElementById('current-date').textContent = 
-        new Date().toLocaleDateString('en-US', options);
+// Остановка таймера
+function stopTimer() {
+    clearInterval(timerInterval);
+    timerInterval = null;
 }
 
-// Рендер статистики
-function renderStats() {
-    statsContainer.innerHTML = `
-        <div class="stat-card">
-            <div class="stat-label">Study Time</div>
-            <div class="stat-value">${stats.studyTime}</div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-label">Tasks Done</div>
-            <div class="stat-value">${stats.tasksCompleted}</div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-label">Sessions</div>
-            <div class="stat-value">${stats.sessions}</div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-label">Efficiency</div>
-            <div class="stat-value">${stats.efficiency}</div>
-        </div>
-    `;
+// Сохранение сессии
+function saveSession() {
+    const subject = document.getElementById('subject-select').value;
+    if (timerSeconds > 0) {
+        sessions.push({
+            date: new Date().toISOString(),
+            duration: timerSeconds,
+            subject
+        });
+        
+        stats.totalStudyTime += timerSeconds;
+        stats.sessionsCompleted++;
+        updateStats();
+        saveData();
+        renderSessions();
+        
+        timerSeconds = 0;
+        updateTimerDisplay();
+    }
 }
 
-// Рендер задач
-function renderTasks() {
-    const currentGroup = localStorage.getItem('currentGroup');
-    const groupTasks = tasks.filter(task => task.group === currentGroup);
+// Обновление отображения таймера
+function updateTimerDisplay() {
+    const hours = Math.floor(timerSeconds / 3600);
+    const minutes = Math.floor((timerSeconds % 3600) / 60);
+    const seconds = timerSeconds % 60;
     
-    tasksContainer.innerHTML = groupTasks.map(task => `
-        <div class="task-item" data-id="${task.id}">
+    timerDisplay.textContent = 
+        `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+}
+
+// Рендер истории сессий
+function renderSessions() {
+    const container = document.getElementById('sessions-container');
+    const currentGroup = localStorage.getItem('currentGroup');
+    const groupSessions = sessions.filter(s => s.group === currentGroup);
+    
+    container.innerHTML = groupSessions.slice(0, 10).map(session => `
+        <div class="session-item">
             <div>
-                <div class="task-title">${task.text}</div>
-                <div class="task-subject">${getSubjectName(task.subject)}</div>
+                <div>${new Date(session.date).toLocaleString()}</div>
+                <div class="session-subject">${getSubjectName(session.subject)}</div>
             </div>
-            <div class="task-actions">
-                <button class="complete-btn">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                        <path d="M5 13L9 17L19 7" stroke="currentColor" stroke-width="2"/>
-                    </svg>
-                </button>
-                <button class="delete-btn">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                        <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" stroke-width="2"/>
-                    </svg>
-                </button>
-            </div>
+            <div class="session-duration">${formatTime(session.duration)}</div>
         </div>
     `).join('');
 }
 
-// Добавление задачи
-function addTask() {
-    const text = taskInput.value.trim();
-    const subject = subjectSelect.value;
-    const group = localStorage.getItem('currentGroup');
-    
-    if (text && group) {
-        const newTask = {
-            id: Date.now(),
-            text,
-            subject,
-            group,
-            completed: false,
-            createdAt: new Date().toISOString()
-        };
-        
-        tasks.push(newTask);
-        saveTasks();
-        taskInput.value = '';
-        renderTasks();
-        updateStats();
-    }
+// Форматирование времени
+function formatTime(seconds) {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    return `${hours > 0 ? hours + 'ч ' : ''}${minutes}м`;
 }
 
-// Обновление статистики
-function updateStats() {
+// Инициализация графика
+function initChart() {
+    const ctx = document.getElementById('progress-chart').getContext('2d');
     const currentGroup = localStorage.getItem('currentGroup');
-    const groupTasks = tasks.filter(task => task.group === currentGroup);
+    const groupSessions = sessions.filter(s => s.group === currentGroup);
     
-    stats.tasksCompleted = groupTasks.filter(t => t.completed).length;
-    stats.sessions = groupTasks.length;
-    stats.efficiency = groupTasks.length > 0 
-        ? `${Math.round((stats.tasksCompleted / groupTasks.length) * 100)}%` 
-        : '0%';
+    // Группировка по дням
+    const dailyData = groupSessions.reduce((acc, session) => {
+        const date = new Date(session.date).toLocaleDateString();
+        acc[date] = (acc[date] || 0) + session.duration;
+        return acc;
+    }, {});
     
-    localStorage.setItem('stats', JSON.stringify(stats));
-    renderStats();
-}
-
-// Сохранение задач
-function saveTasks() {
-    localStorage.setItem('tasks', JSON.stringify(tasks));
-}
-
-// Загрузка цитаты
-function loadQuote() {
-    const quotes = [
-        "Образование — самое мощное оружие, которое можно использовать, чтобы изменить мир. — Нельсон Мандела",
-        "Учитесь так, словно вы постоянно ощущаете нехватку своих знаний. — Конфуций",
-        "Наука — это организованные знания, мудрость — это организованная жизнь. — Иммануил Кант"
-    ];
-    dailyQuote.textContent = quotes[Math.floor(Math.random() * quotes.length)];
-}
-
-// Вспомогательные функции
-function getSubjectName(key) {
-    const subjects = {
-        math: 'Математика',
-        physics: 'Физика',
-        literature: 'Литература'
-    };
-    return subjects[key];
-}
-
-// Обработчики событий
-function setupEventListeners() {
-    addTaskBtn.addEventListener('click', addTask);
-    taskInput.addEventListener('keypress', (e) => e.key === 'Enter' && addTask());
-    
-    tasksContainer.addEventListener('click', (e) => {
-        const taskItem = e.target.closest('.task-item');
-        if (!taskItem) return;
-        
-        const id = parseInt(taskItem.dataset.id);
-        
-        if (e.target.closest('.delete-btn')) {
-            deleteTask(id);
-        } else if (e.target.closest('.complete-btn')) {
-            completeTask(id);
+    new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: Object.keys(dailyData),
+            datasets: [{
+                label: 'Время изучения (мин)',
+                data: Object.values(dailyData).map(sec => Math.round(sec / 60)),
+                backgroundColor: '#4361ee',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
         }
     });
 }
 
-// Запуск приложения
-init();
+// Обновляем инициализацию
+function init() {
+    if (localStorage.getItem('authenticated')) {
+        updateDate();
+        renderStats();
+        renderTasks();
+        renderSessions();
+        initTimer();
+        initChart();
+        setupEventListeners();
+    }
+}
