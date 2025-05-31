@@ -1,7 +1,6 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-    <link rel="stylesheet" href="css/styles.css">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Study Planner</title>
@@ -12,75 +11,40 @@
 </head>
 <body>
     <div class="container">
+        <!-- Шапка -->
         <div class="header">
             <h1>Study Planner</h1>
-            <div class="date" id="current-date">Tue 26th</div>
+            <div class="date" id="current-date"></div>
         </div>
 
-        <div class="stats-grid">
-            <div class="stat-card">
-                <div class="stat-label">Study Time</div>
-                <div class="stat-value">8h 21m</div>
-                <div class="session-time">13:23</div>
-            </div>
-            
-            <div class="stat-card">
-                <div class="stat-label">Sessions</div>
-                <div class="stat-value">22</div>
-                <div class="session-time">15:21</div>
-            </div>
-            
-            <div class="stat-card">
-                <div class="stat-label">Tasks Done</div>
-                <div class="stat-value">5</div>
-                <div class="session-time">14:10</div>
-            </div>
-            
-            <div class="stat-card">
-                <div class="stat-label">Efficiency</div>
-                <div class="stat-value">85%</div>
-                <div class="session-time">memo/net</div>
-            </div>
-        </div>
-
-        <div class="divider"></div>
-
-        <div class="session-card">
-            <div class="session-time">15:21</div>
-            <div class="session-title">Mathematics</div>
-            <div class="session-subject">Algebra</div>
-        </div>
-        
-        <div class="session-card">
-            <div class="session-time">14:10</div>
-            <div class="session-title">Literature</div>
-            <div class="session-subject">Dostoevsky Analysis</div>
-        </div>
-        
-        <div class="session-card">
-            <div class="session-time">13:23</div>
-            <div class="session-title">Physics</div>
-            <div class="session-subject">Quantum Theory</div>
-        </div>
-
-        <div class="quote">
-            Designed by Akim
-        </div>
         <!-- Форма добавления задачи -->
-<div class="task-form">
-    <input type="text" id="task-input" placeholder="Новая задача (например, 'Математика 2 часа')">
-    <button id="add-task">+</button>
-</div>
+        <div class="task-form">
+            <input type="text" id="task-input" placeholder="Новая задача">
+            <select id="subject-select">
+                <option value="math">Математика</option>
+                <option value="physics">Физика</option>
+                <option value="literature">Литература</option>
+            </select>
+            <button id="add-task-btn">+</button>
+        </div>
 
-<!-- Список задач -->
-<div class="tasks-list" id="tasks"></div>
+        <!-- Статистика -->
+        <div class="stats-grid" id="stats-container"></div>
 
-<!-- Таймер -->
-<div class="timer-container">
-    <div class="timer-display" id="timer">25:00</div>
-    <button id="start-timer">Старт</button>
-    <button id="reset-timer">Сброс</button>
-</div>
+        <!-- Список задач -->
+        <div class="tasks-list" id="tasks-container"></div>
+
+        <!-- Таймер -->
+        <div class="timer-card">
+            <div class="timer-display" id="timer">25:00</div>
+            <div class="timer-controls">
+                <button id="start-timer-btn">Старт</button>
+                <button id="reset-timer-btn">Сброс</button>
+            </div>
+        </div>
+
+        <!-- Цитата дня -->
+        <div class="quote" id="daily-quote"></div>
     </div>
 </body>
 </html>
