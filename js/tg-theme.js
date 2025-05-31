@@ -1,147 +1,164 @@
+// Инициализация Firebase (добавьте этот блок в начало файла)
+const firebaseConfig = {
+  apiKey: "YOUR_API_KEY",
+  authDomain: "YOUR_PROJECT.firebaseapp.com",
+  databaseURL: "https://YOUR_PROJECT.firebaseio.com",
+  projectId: "YOUR_PROJECT_ID",
+  storageBucket: "YOUR_PROJECT.appspot.com",
+  messagingSenderId: "YOUR_SENDER_ID",
+  appId: "YOUR_APP_ID"
+};
+
+// Проверяем, инициализировано ли Firebase
+function initializeFirebase() {
+  try {
+    if (!firebase.apps.length) {
+      firebase.initializeApp(firebaseConfig);
+      console.log("Firebase инициализирован");
+    }
+    return firebase;
+  } catch (error) {
+    console.error("Ошибка инициализации Firebase:", error);
+    return null;
+  }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
-    // Проверяем, запущено ли приложение в Telegram
-    const tg = window.Telegram?.WebApp;
-    if (!tg) {
-        console.error('Telegram WebApp не обнаружен!');
-        showNonTelegramWarning();
-        return;
-    }
+  const tg = window.Telegram?.WebApp;
+  
+  // Режим разработки (если не в Telegram)
+  if (!tg) {
+    console.warn("Запуск вне Telegram. Активирован режим разработки");
+    mockTelegramEnvironment();
+    return;
+  }
 
-    // Инициализация
-    tg.expand(); // Растягиваем на весь экран
-    tg.enableClosingConfirmation(); // Подтверждение закрытия
-    
-    // Проверка авторизации
-    if (!tg.initDataUnsafe.user) {
-        tg.showAlert('Сначала авторизуйтесь в Telegram!');
-        tg.close();
-        return;
-    }
+  // Инициализация Firebase
+  const firebaseApp = initializeFirebase();
+  if (!firebaseApp) {
+    tg.showAlert("Ошибка инициализации базы данных");
+    return;
+  }
 
-    // Получаем данные пользователя
-    const user = tg.initDataUnsafe.user;
-    console.log('Авторизован пользователь:', user.username || user.first_name);
-
-    // Настройка темы Telegram
-    applyTelegramTheme(tg);
-
-    // Кнопка "Назад"
-    setupBackButton(tg);
-
-    // Основная логика приложения
-    initApp(tg);
+  // Основная логика
+  tg.expand();
+  setupTelegramFeatures(tg, firebaseApp);
 });
 
-/**
- * Применяет тему Telegram (светлая/тёмная)
- */
-function applyTelegramTheme(tg) {
-    const themeParams = tg.themeParams;
-    
-    // Устанавливаем CSS-переменные
-    document.documentElement.style.setProperty('--bg-primary', themeParams.bg_color || '#ffffff');
-    document.documentElement.style.setProperty('--text-primary', themeParams.text_color || '#222222');
-    document.documentElement.style.setProperty('--accent', themeParams.button_color || '#2481cc');
-    document.documentElement.style.setProperty('--bg-secondary', themeParams.secondary_bg_color || '#f4f4f5');
+function setupTelegramFeatures(tg, firebaseApp) {
+  // 1. Проверка авторизации
+  if (!tg.initDataUnsafe?.user) {
+    tg.showAlert("Требуется авторизация в Telegram");
+    tg.close();
+    return;
+  }
 
-    // Для тёмной темы добавляем дополнительные стили
-    if (tg.colorScheme === 'dark') {
-        document.documentElement.classList.add('dark-theme');
+  // 2. Применение темы
+  applyTheme(tg);
+
+  // 3. Настройка кнопок
+  tg.BackButton.show();
+  tg.BackButton.onClick(() => handleBackButton(tg));
+
+  // 4. Главная кнопка
+  tg.MainButton
+    .setText("Сохранить прогресс")
+    .show()
+    .onClick(() => saveData(tg, firebaseApp));
+
+  // 5. Показываем интерфейс
+  document.getElementById("app-container").style.display = "block";
+}
+
+function applyTheme(tg) {
+  const root = document.documentElement;
+  const params = tg.themeParams;
+
+  root.style.setProperty("--bg-primary", params.bg_color || "#ffffff");
+  root.style.setProperty("--text-primary", params.text_color || "#222222");
+  root.style.setProperty("--accent", params.button_color || "#2481cc");
+  
+  if (tg.colorScheme === "dark") {
+    root.classList.add("dark-mode");
+  }
+}
+
+async function saveData(tg, firebase) {
+  try {
+    const userId = tg.initDataUnsafe.user.id;
+    const userData = {
+      tasks: window.tasks,
+      sessions: window.sessions,
+      lastUpdated: new Date().toISOString()
+    };
+
+    // Сохраняем в Firebase
+    await firebase.database().ref(`telegramUsers/${userId}`).set(userData);
+    
+    // Дублируем в Telegram Cloud
+    tg.sendData(JSON.stringify(userData));
+    
+    tg.showAlert("Данные сохранены!");
+  } catch (error) {
+    console.error("Ошибка сохранения:", error);
+    tg.showAlert("Ошибка: " + error.message);
+  }
+}
+
+function handleBackButton(tg) {
+  tg.showConfirm("Закрыть приложение?", (confirmed) => {
+    if (confirmed) tg.close();
+  });
+}
+
+// Мок-окружение для разработки
+function mockTelegramEnvironment() {
+  console.warn("Используется мок-окружение Telegram");
+  
+  window.Telegram = {
+    WebApp: {
+      initDataUnsafe: {
+        user: {
+          id: 123456789,
+          first_name: "Developer",
+          username: "dev_test"
+        }
+      },
+      themeParams: {
+        bg_color: "#ffffff",
+        text_color: "#222222",
+        button_color: "#2481cc"
+      },
+      colorScheme: "light",
+      expand: () => console.log("App expanded"),
+      showAlert: (msg) => alert("ALERT: " + msg),
+      showConfirm: (msg, callback) => callback(confirm(msg)),
+      sendData: (data) => console.log("Data sent:", data),
+      close: () => console.log("App closed"),
+      BackButton: {
+        show: () => console.log("BackButton shown"),
+        onClick: (cb) => window.mockBackButton = cb
+      },
+      MainButton: {
+        setText: (t) => console.log("MainButton text:", t),
+        show: () => console.log("MainButton shown"),
+        onClick: (cb) => window.mockMainButton = cb
+      }
     }
+  };
+
+  // Имитируем клики для тестов
+  setTimeout(() => {
+    window.mockBackButton?.();
+    window.mockMainButton?.();
+  }, 3000);
 }
 
-/**
- * Настраивает кнопку "Назад"
- */
-function setupBackButton(tg) {
-    tg.BackButton.show();
-    tg.BackButton.onClick(() => {
-        // Можно добавить подтверждение выхода
-        tg.showConfirm('Закрыть приложение?', (confirmed) => {
-            if (confirmed) tg.close();
-        });
-    });
-}
-
-/**
- * Инициализирует основное приложение
- */
-function initApp(tg) {
-    // Показываем интерфейс
-    document.getElementById('app-container').style.display = 'block';
-    
-    // Настройка MainButton
-    tg.MainButton.setText('Сохранить')
-        .setParams({ color: tg.themeParams.button_color })
-        .show()
-        .onClick(() => {
-            saveDataToTelegram(tg);
-        });
-}
-
-/**
- * Сохраняет данные в Telegram Cloud
- */
-function saveDataToTelegram(tg) {
-    const data = {
-        tasks: window.tasks,
-        sessions: window.sessions,
-        stats: window.stats
-    };
-    
-    tg.sendData(JSON.stringify(data));
-    tg.showAlert('Данные сохранены в облако Telegram!');
-}
-
-/**
- * Показывает предупреждение для не-Telegram окружения
- */
-function showNonTelegramWarning() {
-    const warning = document.createElement('div');
-    warning.innerHTML = `
-        <div class="non-telegram-warning">
-            <h2>Это приложение работает только в Telegram!</h2>
-            <p>Откройте его через Telegram-бота.</p>
-        </div>
-    `;
-    document.body.appendChild(warning);
-    
-    // Добавляем стили
-    const style = document.createElement('style');
-    style.textContent = `
-        .non-telegram-warning {
-            padding: 20px;
-            text-align: center;
-            color: #ff0000;
-            background: #fff3f3;
-            border: 2px solid #ff0000;
-            border-radius: 10px;
-            margin: 20px;
-        }
-    `;
-    document.head.appendChild(style);
-}
-
-// Экспорт для тестирования (если нужно)
-if (typeof module !== 'undefined' && module.exports) {
-    module.exports = {
-        applyTelegramTheme,
-        setupBackButton
-    };
-}
-// Только для разработки!
-if (!window.Telegram) {
-    window.Telegram = {
-        WebApp: {
-            initDataUnsafe: { user: { id: 123, first_name: "Test" } },
-            themeParams: {},
-            expand: () => console.log("Expanded"),
-            BackButton: { show: () => {}, onClick: () => {} },
-            MainButton: { 
-                setText: () => {}, 
-                show: () => {}, 
-                onClick: () => {} 
-            }
-        }
-    };
+// Для модульных тестов
+if (typeof module !== 'undefined') {
+  module.exports = {
+    initializeFirebase,
+    setupTelegramFeatures,
+    applyTheme
+  };
 }
