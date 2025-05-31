@@ -3,9 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Study Planner</title>
+    <title>Study Planner PRO</title>
     <link rel="stylesheet" href="css/styles.css">
     <link rel="preload" href="assets/fonts/Inter.woff2" as="font" type="font/woff2" crossorigin>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="js/auth.js" defer></script>
     <script src="js/tg-theme.js" defer></script>
@@ -15,18 +16,22 @@
     <!-- Экран авторизации -->
     <div id="auth-screen" class="auth-screen">
         <div class="auth-container">
-            <h2>Study Planner</h2>
-            <input type="password" id="admin-password" placeholder="Пароль администратора">
-            <select id="group-select">
-                <option value="group1">Группа 1</option>
-                <option value="group2">Группа 2</option>
-            </select>
+            <h2>Study Planner PRO</h2>
+            <div class="input-group">
+                <input type="password" id="admin-password" placeholder="Пароль администратора">
+                <select id="group-select">
+                    <option value="group1">Группа 1</option>
+                    <option value="group2">Группа 2</option>
+                    <option value="group3">Группа 3</option>
+                </select>
+            </div>
             <button id="login-btn">Войти</button>
         </div>
     </div>
 
     <!-- Основной интерфейс -->
     <div id="app-container" class="container" style="display: none;">
+        <!-- Шапка -->
         <div class="header">
             <div>
                 <h1>Study Planner</h1>
@@ -35,12 +40,15 @@
             <div class="date" id="current-date"></div>
         </div>
 
+        <!-- Форма добавления задачи -->
         <div class="task-form">
             <input type="text" id="task-input" placeholder="Новая задача">
             <select id="subject-select">
                 <option value="math">Математика</option>
                 <option value="physics">Физика</option>
                 <option value="literature">Литература</option>
+                <option value="language">Языки</option>
+                <option value="other">Другое</option>
             </select>
             <button id="add-task-btn">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
@@ -49,11 +57,34 @@
             </button>
         </div>
 
-        <div class="stats-grid" id="stats-container"></div>
+        <!-- Таймер изучения -->
+        <div class="study-timer">
+            <div class="timer-display" id="timer">00:00:00</div>
+            <div class="timer-controls">
+                <button id="start-timer-btn">Старт</button>
+                <button id="stop-timer-btn">Стоп</button>
+                <button id="save-timer-btn">Сохранить</button>
+            </div>
+        </div>
 
-        <div class="tasks-list" id="tasks-container"></div>
+        <!-- Статистика -->
+        <div class="stats-section">
+            <h3>Статистика</h3>
+            <div class="stats-grid" id="stats-container"></div>
+            <canvas id="progress-chart"></canvas>
+        </div>
 
-        <div class="quote" id="daily-quote"></div>
+        <!-- Список задач -->
+        <div class="tasks-section">
+            <h3>Текущие задачи</h3>
+            <div class="tasks-list" id="tasks-container"></div>
+        </div>
+
+        <!-- История сессий -->
+        <div class="sessions-history">
+            <h3>История изучения</h3>
+            <div id="sessions-container"></div>
+        </div>
 
         <button id="logout-btn" class="logout-btn">Выйти</button>
     </div>
