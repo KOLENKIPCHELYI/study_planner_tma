@@ -1,5 +1,5 @@
 const ADMIN_EMAIL = "eakimov195@gmail.com"; // Замените на ваш email
-const ADMIN_PASSWORD = "akim"; // Замените на ваш пароль
+const ADMIN_PASSWORD = "123456"; // Замените на ваш пароль
 
 // Элементы интерфейса
 const authScreen = document.getElementById('auth-screen');
