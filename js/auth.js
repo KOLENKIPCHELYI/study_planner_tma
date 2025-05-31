@@ -9,10 +9,6 @@ const logoutBtn = document.getElementById('logout-btn');
 
 // Инициализация Firebase Auth
 function initAuth() {
-// Временный код для регистрации (удалите после первого входа!)
-firebase.auth().createUserWithEmailAndPassword(ADMIN_EMAIL, ADMIN_PASSWORD)
-  .then(() => console.log("Admin registered"))
-  .catch(error => console.error("Registration error:", error));
     firebase.auth().onAuthStateChanged((user) => {
         if (user) {
             // Пользователь авторизован
