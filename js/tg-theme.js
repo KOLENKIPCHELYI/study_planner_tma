@@ -5,17 +5,18 @@ document.addEventListener('DOMContentLoaded', () => {
     tg.expand();
     tg.enableClosingConfirmation();
 
-    // Применение темы Telegram
-    if (tg.colorScheme === 'dark') {
-        document.documentElement.style.setProperty('--bg-primary', '#1a1a1a');
-        document.documentElement.style.setProperty('--bg-secondary', '#2d2d2d');
-        document.documentElement.style.setProperty('--text-primary', '#f8f9fa');
-    }
-
-    // Кнопка "Назад" в Telegram
-    tg.BackButton.onClick(() => {
-        if (appContainer.style.display === 'block') {
-            logoutBtn.click();
+    // Интеграция тем Telegram с Firebase
+    firebase.auth().onAuthStateChanged((user) => {
+        if (user) {
+            if (tg.colorScheme === 'dark') {
+                document.documentElement.style.setProperty('--bg-primary', '#1a1a1a');
+                document.documentElement.style.setProperty('--text-primary', '#f8f9fa');
+            }
+            tg.MainButton.setText("Сохранить в облако").show();
         }
+    });
+
+    tg.BackButton.onClick(() => {
+        firebase.auth().signOut();
     });
 });
